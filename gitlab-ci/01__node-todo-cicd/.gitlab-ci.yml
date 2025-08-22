@@ -1,0 +1,18 @@
+stages:
+  - build
+  - test
+  - push_to_docker
+build_stage:
+  stage: build
+  script:
+    - docker build -t node-app:latest .
+test_job:
+  stage: test
+  script:
+    - echo "testing the image ..."
+push_job:
+  stage: push_to_docker
+  script:
+    - docker login -u $DOCKERHUB_USER -p DOCKERHUB_PASS
+    - docker image tag node-app:latest $DOCKERHUB_USER/node-app:latest
+    - docker push $DOCKERHUB_USER/node-app:latest
