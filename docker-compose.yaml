@@ -1,0 +1,14 @@
+services:
+  floci:
+    image: floci/floci:1.5.23
+
+    ports:
+      - "4566:4566"
+      - "9169:9169"
+
+    volumes:
+      - floci-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  floci-data: 
