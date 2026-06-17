@@ -1,23 +1,3 @@
-package documents
-
-import (
-	"net/http"
-
-	"github.com/go-chi/chi/v5"
-)
-
-type Handler struct {
-	Service Service
-}
-
-func NewHandler(service Service) Handler {
-
-	return Handler{
-		Service: service,
-	}
-
-}
-
 func (h Handler) Upload(
 
 	w http.ResponseWriter,
@@ -42,19 +22,33 @@ func (h Handler) Upload(
 
 	defer file.Close()
 
-	w.Write([]byte(header.Filename))
+	err = h.Service.CreateDocument(
 
-}
+		r.Context(),
 
-func Routes(h Handler) chi.Router {
+		header.Filename,
 
-	r := chi.NewRouter()
+		header.Filename,
 
-	r.Post(
-		"/upload",
-		h.Upload,
+		header.Header.Get("Content-Type"),
+
+		file,
 	)
 
-	return r
+	if err != nil {
+
+		http.Error(
+			w,
+			err.Error(),
+			500,
+		)
+
+		return
+
+	}
+
+	w.Write([]byte(
+		"document processed",
+	))
 
 }
