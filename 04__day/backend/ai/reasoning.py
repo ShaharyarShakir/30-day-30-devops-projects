@@ -194,16 +194,26 @@ class ConfidenceEngine:
 
 
 async def analyze_cluster_state(investigation: dict[str, Any]) -> dict[str, Any]:
-    """Main entry point for AI Kubernetes analysis."""
+    """Main entry point for AI cluster analysis."""
     logger.info("Starting AI cluster analysis")
-
     try:
         prompt = PromptBuilder.build_prompt(investigation)
         llm_client = LLMClient()
         response = await llm_client.call_llm(prompt)
 
         logger.info("LLM response received")
-        return json.loads(response)
+        
+        # Clean up markdown code blocks if the LLM wrapped the JSON
+        cleaned_response = response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        elif cleaned_response.startswith("```"):
+            cleaned_response = cleaned_response[3:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        return json.loads(cleaned_response)
 
     except Exception as e:
         logger.error(f"AI analysis failed: {e}")
