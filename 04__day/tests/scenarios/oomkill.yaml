@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-oomkilled
+  namespace: default
+  labels:
+    app: test-oomkilled
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-oomkilled
+  template:
+    metadata:
+      labels:
+        app: test-oomkilled
+    spec:
+      containers:
+      - name: memory-hog
+        image: python:3.9-slim
+        command: ["python", "-c"]
+        args:
+        - |
+          import time
+          print("Starting memory allocation...")
+          # Keep allocating memory until OOM
+          lst = []
+          for i in range(10000000):
+              lst.append("a" * 100)
+              if i % 100000 == 0:
+                  print(f"Allocated {i} chunks")
+                  time.sleep(0.01)
+        resources:
+          limits:
+            memory: "15Mi"
+          requests:
+            memory: "10Mi"
