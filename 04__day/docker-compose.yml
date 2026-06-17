@@ -3,10 +3,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
+    network_mode: "host"
+    volumes:
+      - ~/.kube:/root/.kube:ro
     env_file:
-      - ./backend/.env.example
+      - ./backend/.env
 
   frontend:
     build:
