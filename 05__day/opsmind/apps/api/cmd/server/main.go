@@ -20,13 +20,14 @@ func main() {
 
 		Queries: queries,
 	}
+	docHandler := documents.NewHandler(docService)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OpsMind API running"))
 	})
 	r.Mount(
 		"/documents",
-		documents.Routes(docService),
+		documents.Routes(docHandler),
 	)
 	log.Println("server running on :8080")
 
