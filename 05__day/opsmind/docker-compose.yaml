@@ -1,0 +1,34 @@
+services:
+
+
+ postgres:
+
+  image: pgvector/pgvector:pg17
+
+
+  container_name: opsmind-db
+
+
+  environment:
+
+   POSTGRES_USER: opsmind
+
+   POSTGRES_PASSWORD: password
+
+   POSTGRES_DB: knowledge
+
+
+  ports:
+
+   - "5432:5432"
+
+
+  volumes:
+
+   - postgres_data:/var/lib/postgresql/data
+
+
+
+volumes:
+
+ postgres_data:
