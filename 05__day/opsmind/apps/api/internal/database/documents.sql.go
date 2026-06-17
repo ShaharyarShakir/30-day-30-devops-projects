@@ -8,6 +8,7 @@ package database
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -58,7 +59,7 @@ FROM documents
 WHERE id=$1
 `
 
-func (q *Queries) GetDocument(ctx context.Context, id pgtype.UUID) (Document, error) {
+func (q *Queries) GetDocument(ctx context.Context, id uuid.UUID) (Document, error) {
 	row := q.db.QueryRow(ctx, getDocument, id)
 	var i Document
 	err := row.Scan(
