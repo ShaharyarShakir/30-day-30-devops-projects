@@ -8,7 +8,7 @@ package database
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createChunk = `-- name: CreateChunk :one
@@ -30,8 +30,8 @@ RETURNING id, document_id, content, embedding, created_at
 `
 
 type CreateChunkParams struct {
-	DocumentID pgtype.UUID `json:"document_id"`
-	Content    string      `json:"content"`
+	DocumentID uuid.UUID `json:"document_id"`
+	Content    string    `json:"content"`
 }
 
 func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (Chunk, error) {
@@ -57,7 +57,7 @@ FROM chunks
 WHERE document_id=$1
 `
 
-func (q *Queries) GetChunks(ctx context.Context, documentID pgtype.UUID) ([]Chunk, error) {
+func (q *Queries) GetChunks(ctx context.Context, documentID uuid.UUID) ([]Chunk, error) {
 	rows, err := q.db.Query(ctx, getChunks, documentID)
 	if err != nil {
 		return nil, err
