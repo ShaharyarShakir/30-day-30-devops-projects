@@ -4,7 +4,9 @@
     "kubectl@latest",
     "terraform@latest",
     "ansible@latest",
-    "awscli2@latest"
+    "awscli2@latest",
+    "kind@latest",
+    "mise@latest"
   ],
   "shell": {
     "init_hook": [
