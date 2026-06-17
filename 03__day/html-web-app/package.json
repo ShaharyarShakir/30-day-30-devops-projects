@@ -1,0 +1,7 @@
+{
+    "name": "html-web-app",
+    "private": true,
+    "devDependencies": {
+        "htmlhint": "^1.6.3"
+    }
+}
