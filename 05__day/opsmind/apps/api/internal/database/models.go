@@ -5,20 +5,21 @@
 package database
 
 import (
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pgvector/pgvector-go"
 )
 
 type Chunk struct {
-	ID         pgtype.UUID      `json:"id"`
-	DocumentID pgtype.UUID      `json:"document_id"`
+	ID         uuid.UUID        `json:"id"`
+	DocumentID uuid.UUID        `json:"document_id"`
 	Content    string           `json:"content"`
 	Embedding  pgvector.Vector  `json:"embedding"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
 }
 
 type Document struct {
-	ID          pgtype.UUID      `json:"id"`
+	ID          uuid.UUID        `json:"id"`
 	Title       string           `json:"title"`
 	Filename    string           `json:"filename"`
 	ContentType pgtype.Text      `json:"content_type"`
