@@ -9,24 +9,17 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createChunk = `-- name: CreateChunk :one
 
-
-INSERT INTO chunks
-(
-document_id,
-content
+INSERT INTO chunks (
+    document_id,
+    content
 )
-
-VALUES
-(
-$1,
-$2
-)
-
-RETURNING id, document_id, content, embedding, created_at
+VALUES ($1, $2)
+RETURNING id, document_id, content, created_at
 `
 
 type CreateChunkParams struct {
@@ -34,14 +27,20 @@ type CreateChunkParams struct {
 	Content    string    `json:"content"`
 }
 
-func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (Chunk, error) {
+type CreateChunkRow struct {
+	ID         uuid.UUID        `json:"id"`
+	DocumentID uuid.UUID        `json:"document_id"`
+	Content    string           `json:"content"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (CreateChunkRow, error) {
 	row := q.db.QueryRow(ctx, createChunk, arg.DocumentID, arg.Content)
-	var i Chunk
+	var i CreateChunkRow
 	err := row.Scan(
 		&i.ID,
 		&i.DocumentID,
 		&i.Content,
-		&i.Embedding,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -49,28 +48,31 @@ func (q *Queries) CreateChunk(ctx context.Context, arg CreateChunkParams) (Chunk
 
 const getChunks = `-- name: GetChunks :many
 
-
-SELECT id, document_id, content, embedding, created_at
-
+SELECT id, document_id, content, created_at
 FROM chunks
-
-WHERE document_id=$1
+WHERE document_id = $1
 `
 
-func (q *Queries) GetChunks(ctx context.Context, documentID uuid.UUID) ([]Chunk, error) {
+type GetChunksRow struct {
+	ID         uuid.UUID        `json:"id"`
+	DocumentID uuid.UUID        `json:"document_id"`
+	Content    string           `json:"content"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) GetChunks(ctx context.Context, documentID uuid.UUID) ([]GetChunksRow, error) {
 	rows, err := q.db.Query(ctx, getChunks, documentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Chunk
+	var items []GetChunksRow
 	for rows.Next() {
-		var i Chunk
+		var i GetChunksRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.DocumentID,
 			&i.Content,
-			&i.Embedding,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
