@@ -1,27 +1,16 @@
 -- name: CreateChunk :one
 
-
-INSERT INTO chunks
-(
-document_id,
-content
+INSERT INTO chunks (
+    document_id,
+    content
 )
-
-VALUES
-(
-$1,
-$2
-)
-
-RETURNING *;
+VALUES ($1, $2)
+RETURNING id, document_id, content, created_at;
 
 
 
 -- name: GetChunks :many
 
-
-SELECT *
-
+SELECT id, document_id, content, created_at
 FROM chunks
-
-WHERE document_id=$1;
+WHERE document_id = $1;
