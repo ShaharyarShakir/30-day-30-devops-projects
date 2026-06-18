@@ -1,3 +1,23 @@
+package documents
+
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+)
+
+type Handler struct {
+	Service Service
+}
+
+func NewHandler(service Service) Handler {
+
+	return Handler{
+		Service: service,
+	}
+
+}
+
 func (h Handler) Upload(
 
 	w http.ResponseWriter,
@@ -50,5 +70,17 @@ func (h Handler) Upload(
 	w.Write([]byte(
 		"document processed",
 	))
+
+}
+func Routes(h Handler) chi.Router {
+
+	r := chi.NewRouter()
+
+	r.Post(
+		"/upload",
+		h.Upload,
+	)
+
+	return r
 
 }
