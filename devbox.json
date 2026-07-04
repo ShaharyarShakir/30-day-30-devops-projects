@@ -7,7 +7,8 @@
     "awscli2@latest",
     "kind@latest",
     "mise@latest",
-    "act@latest"
+    "act@latest",
+    "kubernetes-helm@latest"
   ],
   "shell": {
     "init_hook": [
