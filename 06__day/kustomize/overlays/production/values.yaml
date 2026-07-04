@@ -1,0 +1,16 @@
+namespace: url-shortener-prod
+
+backend:
+  replicaCount: 4
+
+frontend:
+  replicaCount: 3
+
+postgres:
+  storage: 100Gi
+
+vault:
+  enabled: true
+
+ingress:
+  enabled: true
