@@ -10,6 +10,9 @@ services:
     ports:
       - "8080:8080"
 
+    env_file:
+      - ./backend/.env
+
     depends_on:
       - postgres
 
