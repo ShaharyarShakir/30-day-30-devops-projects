@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "url-shortener.fullname" . }}-backend
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "url-shortener.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "url-shortener.selectorLabels" . | nindent 6 }}
+      app: backend
+  template:
+    metadata:
+      labels:
+        {{- include "url-shortener.selectorLabels" . | nindent 8 }}
+        app: backend
+      {{- if .Values.vault.enabled }}
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: {{ .Values.vault.role | quote }}
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/{{ .Values.vault.role }}"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{ print "{{- with secret \"secret/data/" .Values.vault.role "\" -}}" }}
+          DB_USER={{ print "{{ .Data.data.DB_USER }}" }}
+          DB_PASSWORD={{ print "{{ .Data.data.DB_PASSWORD }}" }}
+          DB_NAME={{ print "{{ .Data.data.DB_NAME }}" }}
+          {{ print "{{- end }}" }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "url-shortener.fullname" . }}-backend
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backend.service.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "url-shortener.fullname" . }}-config
+            {{- if not .Values.vault.enabled }}
+            - secretRef:
+                name: {{ include "url-shortener.fullname" . }}-secret
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ .Values.backend.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: {{ .Values.backend.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
