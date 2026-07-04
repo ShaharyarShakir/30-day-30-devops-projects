@@ -2,9 +2,15 @@ namespace: url-shortener-dev
 
 backend:
   replicaCount: 1
+  image:
+    repository: localhost:5000/06__day-backend
+    tag: latest
 
 frontend:
   replicaCount: 1
+  image:
+    repository: localhost:5000/06__day-frontend
+    tag: latest
 
 vault:
   enabled: false
