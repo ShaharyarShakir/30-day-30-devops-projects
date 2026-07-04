@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+
+	"go.opentelemetry.io/otel"
 )
 
 type ShortenRequest struct {
@@ -19,11 +21,16 @@ func (h *Handler) Shorten(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	tracer := otel.Tracer("url-shortener")
+	ctx, span := tracer.Start(r.Context(), "create-short-url")
+	defer span.End()
+
 	var req ShortenRequest
 
 	if err := json.NewDecoder(r.Body).
 		Decode(&req); err != nil {
 
+		span.RecordError(err)
 		http.Error(
 			w,
 			"invalid request",
@@ -35,6 +42,7 @@ func (h *Handler) Shorten(
 
 	code, err := generateCode(6)
 	if err != nil {
+		span.RecordError(err)
 		http.Error(
 			w,
 			"failed to generate code",
@@ -45,12 +53,13 @@ func (h *Handler) Shorten(
 	}
 
 	err = h.DB.CreateURL(
-		r.Context(),
+		ctx,
 		req.URL,
 		code,
 	)
 
 	if err != nil {
+		span.RecordError(err)
 		http.Error(
 			w,
 			"database error",
@@ -60,7 +69,7 @@ func (h *Handler) Shorten(
 		return
 	}
 
-	json.NewEncoder(w).Encode(
+	_ = json.NewEncoder(w).Encode(
 		map[string]string{
 			"short_code": code,
 		},
