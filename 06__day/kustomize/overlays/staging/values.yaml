@@ -1,0 +1,16 @@
+namespace: url-shortener-staging
+
+backend:
+  replicaCount: 2
+
+frontend:
+  replicaCount: 2
+
+vault:
+  enabled: true
+
+ingress:
+  enabled: true
+
+postgres:
+  storage: 20Gi
