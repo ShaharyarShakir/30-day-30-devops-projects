@@ -29,7 +29,7 @@ spec:
       serviceAccountName: backend
       containers:
         - name: backend
-          image: localhost:5000/06__day-backend:latest
+          image: shaharyarshakir/url-shortener-backend:latest
           imagePullPolicy: IfNotPresent
 
           ports:
