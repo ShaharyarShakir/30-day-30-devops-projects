@@ -1,23 +1,22 @@
 <script lang="ts">
-	import { shortenUrl } from "$lib/api";
+	import { shortenUrl } from '$lib/api';
 
-	let url = $state("");
-	let shortCode = $state("");
+	let url = $state('');
+	let shortCode = $state('');
 	let loading = $state(false);
-	let error = $state("");
+	let error = $state('');
 
 	async function submit() {
-		error = "";
-		shortCode = "";
+		error = '';
+		shortCode = '';
 		loading = true;
 
 		try {
 			const result = await shortenUrl(url);
 
-			shortCode =
-				`http://localhost:8080/${result.short_code}`;
-		} catch (err) {
-			error = "Failed to shorten URL";
+			shortCode = `http://localhost:8080/${result.short_code}`;
+		} catch {
+			error = 'Failed to shorten URL';
 		} finally {
 			loading = false;
 		}
@@ -40,15 +39,18 @@
 			disabled={loading}
 			class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors"
 		>
-			{loading ? "Loading..." : "Shorten"}
+			{loading ? 'Loading...' : 'Shorten'}
 		</button>
 	</div>
 
 	{#if shortCode}
 		<p class="text-sm text-gray-700">
 			Short URL:
-			
-			<a	href={shortCode}
+
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+			<a
+				href={shortCode}
+				rel="external"
 				class="text-blue-600 hover:text-blue-800 underline break-all"
 			>
 				{shortCode}
