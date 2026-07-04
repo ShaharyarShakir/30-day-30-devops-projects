@@ -1,0 +1,14 @@
+backend:
+  replicaCount: 1
+
+frontend:
+  replicaCount: 1
+
+vault:
+  enabled: false
+
+ingress:
+  enabled: false
+
+postgres:
+  storage: 5Gi
