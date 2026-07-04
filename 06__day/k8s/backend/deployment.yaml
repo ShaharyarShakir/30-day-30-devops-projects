@@ -14,8 +14,19 @@ spec:
     metadata:
       labels:
         app: backend
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "url-shortener"
+        vault.hashicorp.com/agent-inject-secret-config: "secret/data/url-shortener"
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/url-shortener" -}}
+          DB_USER={{ .Data.data.DB_USER }}
+          DB_PASSWORD={{ .Data.data.DB_PASSWORD }}
+          DB_NAME={{ .Data.data.DB_NAME }}
+          {{- end }}
 
     spec:
+      serviceAccountName: backend
       containers:
         - name: backend
           image: localhost:5000/06__day-backend:latest
@@ -27,9 +38,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: app-config
-
-            - secretRef:
-                name: app-secret
+            # Secrets are loaded dynamically via Vault agent sidecar
+            # - secretRef:
+            #     name: app-secret
 
           readinessProbe:
             httpGet:
