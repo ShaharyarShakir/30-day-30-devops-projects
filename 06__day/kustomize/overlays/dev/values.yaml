@@ -1,3 +1,5 @@
+namespace: url-shortener-dev
+
 backend:
   replicaCount: 1
 
