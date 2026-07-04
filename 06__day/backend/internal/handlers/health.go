@@ -22,5 +22,5 @@ func Health(
 		Status: "ok",
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
