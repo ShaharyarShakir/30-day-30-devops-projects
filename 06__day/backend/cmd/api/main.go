@@ -18,7 +18,15 @@ func main() {
 	handler := middleware.Logging(mux)
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /api/v1/shorten", handlers.Shorten)
+	mux.HandleFunc(
+		"GET /livez",
+		handlers.Health,
+	)
 
+	mux.HandleFunc(
+		"GET /readyz",
+		handlers.Health,
+	)
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      handler,
