@@ -3,13 +3,13 @@ namespace: url-shortener-dev
 backend:
   replicaCount: 1
   image:
-    repository: localhost:5000/06__day-backend
+    repository: shaharyarshakir/url-shortener-backend
     tag: latest
 
 frontend:
   replicaCount: 1
   image:
-    repository: localhost:5000/06__day-frontend
+    repository: shaharyarshakir/url-shortener-frontend
     tag: latest
 
 vault:
