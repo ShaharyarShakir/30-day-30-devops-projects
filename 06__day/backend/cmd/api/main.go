@@ -9,15 +9,31 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ShaharyarShakir/url-shortener/internal/config"
 	"github.com/ShaharyarShakir/url-shortener/internal/handlers"
 	"github.com/ShaharyarShakir/url-shortener/internal/middleware"
+	"github.com/ShaharyarShakir/url-shortener/internal/storage"
 )
 
 func main() {
+	if err := config.LoadVaultSecrets(); err != nil {
+		log.Fatalf("failed to load Vault secrets: %v", err)
+	}
+
 	mux := http.NewServeMux()
 	handler := middleware.CORS(middleware.Logging(mux))
+	db, err := storage.NewPostgres()
+	if err != nil {
+		log.Fatalf("database connection failed: %v", err)
+	}
+
+	defer db.DB.Close()
+
+	h := handlers.NewHandler(db)
+
 	mux.HandleFunc("GET /health", handlers.Health)
-	mux.HandleFunc("POST /api/v1/shorten", handlers.Shorten)
+	mux.HandleFunc("POST /api/v1/shorten", h.Shorten)
+	mux.HandleFunc("GET /{code}", h.Redirect)
 	mux.HandleFunc(
 		"GET /livez",
 		handlers.Health,
