@@ -15,7 +15,7 @@ import (
 
 func main() {
 	mux := http.NewServeMux()
-	handler := middleware.Logging(mux)
+	handler := middleware.CORS(middleware.Logging(mux))
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /api/v1/shorten", handlers.Shorten)
 	mux.HandleFunc(
