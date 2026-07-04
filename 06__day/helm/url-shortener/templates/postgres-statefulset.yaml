@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "url-shortener.fullname" . }}-postgres
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "url-shortener.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "url-shortener.fullname" . }}-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "url-shortener.selectorLabels" . | nindent 6 }}
+      app: postgres
+  template:
+    metadata:
+      labels:
+        {{- include "url-shortener.selectorLabels" . | nindent 8 }}
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "url-shortener.fullname" . }}-config
+                  key: DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "url-shortener.fullname" . }}-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "url-shortener.fullname" . }}-secret
+                  key: DB_PASSWORD
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-storage
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage | quote }}
