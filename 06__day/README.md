@@ -67,22 +67,22 @@ EOF'
 ```
 
 ### Step 5: Tag and Push Local Images
-Once configured, tag your locally built images and push them to the local registry:
+Once configured, tag your locally built images and push them to Docker Hub:
 ```bash
 # Tag frontend & backend
-docker tag 06__day-frontend:latest localhost:5000/06__day-frontend:latest
-docker tag 06__day-backend:latest localhost:5000/06__day-backend:latest
+docker tag 06__day-frontend:latest shaharyarshakir/url-shortener-frontend:latest
+docker tag 06__day-backend:latest shaharyarshakir/url-shortener-backend:latest
 
-# Push to local registry
-docker push localhost:5000/06__day-frontend:latest
-docker push localhost:5000/06__day-backend:latest
+# Push to Docker Hub
+docker push shaharyarshakir/url-shortener-frontend:latest
+docker push shaharyarshakir/url-shortener-backend:latest
 ```
 
 ### Step 6: Verify Image Resolution Inside Kind Node (Optional)
 Ensure the Kind node can pull the images directly via containerd (`crictl`):
 ```bash
-docker exec url-shortner-demo-control-plane crictl pull localhost:5000/06__day-frontend:latest
-docker exec url-shortner-demo-control-plane crictl pull localhost:5000/06__day-backend:latest
+docker exec url-shortner-demo-control-plane crictl pull shaharyarshakir/url-shortener-frontend:latest
+docker exec url-shortner-demo-control-plane crictl pull shaharyarshakir/url-shortener-backend:latest
 ```
 
 ---
@@ -92,7 +92,7 @@ docker exec url-shortner-demo-control-plane crictl pull localhost:5000/06__day-b
 Deployments are managed via **Kustomize** compiling the **Helm** templates.
 
 ### Development Configuration
-The dev environment overrides default Helm values to use our local registry. This is defined in `kustomize/overlays/dev/values.yaml`:
+The dev environment overrides default Helm values to use our Docker Hub repository. This is defined in `kustomize/overlays/dev/values.yaml`:
 
 ```yaml
 namespace: url-shortener-dev
@@ -100,13 +100,13 @@ namespace: url-shortener-dev
 backend:
   replicaCount: 1
   image:
-    repository: localhost:5000/06__day-backend
+    repository: shaharyarshakir/url-shortener-backend
     tag: latest
 
 frontend:
   replicaCount: 1
   image:
-    repository: localhost:5000/06__day-frontend
+    repository: shaharyarshakir/url-shortener-frontend
     tag: latest
 
 vault:
