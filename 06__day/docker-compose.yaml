@@ -39,7 +39,7 @@ services:
 
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: super-secret-password
       POSTGRES_DB: url_shortener
 
     ports:
