@@ -10,17 +10,18 @@ import (
 	"time"
 
 	"github.com/ShaharyarShakir/url-shortener/internal/handlers"
+	"github.com/ShaharyarShakir/url-shortener/internal/middleware"
 )
 
 func main() {
 	mux := http.NewServeMux()
-
+	handler := middleware.Logging(mux)
 	mux.HandleFunc("GET /health", handlers.Health)
 	mux.HandleFunc("POST /api/v1/shorten", handlers.Shorten)
 
 	server := &http.Server{
 		Addr:         ":8080",
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
