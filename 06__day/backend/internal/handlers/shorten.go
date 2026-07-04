@@ -15,47 +15,56 @@ type ShortenResponse struct {
 	ShortCode string `json:"short_code"`
 }
 
-func Shorten(
+func (h *Handler) Shorten(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	var request ShortenRequest
+	var req ShortenRequest
 
 	if err := json.NewDecoder(r.Body).
-		Decode(&request); err != nil {
+		Decode(&req); err != nil {
 
 		http.Error(
 			w,
-			"invalid request body",
+			"invalid request",
 			http.StatusBadRequest,
 		)
 
 		return
 	}
 
-	shortCode, err := generateCode(6)
-
+	code, err := generateCode(6)
 	if err != nil {
 		http.Error(
 			w,
-			"internal server error",
+			"failed to generate code",
 			http.StatusInternalServerError,
 		)
 
 		return
 	}
 
-	response := ShortenResponse{
-		ShortCode: shortCode,
-	}
-
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
+	err = h.DB.CreateURL(
+		r.Context(),
+		req.URL,
+		code,
 	)
 
-	json.NewEncoder(w).
-		Encode(response)
+	if err != nil {
+		http.Error(
+			w,
+			"database error",
+			http.StatusInternalServerError,
+		)
+
+		return
+	}
+
+	json.NewEncoder(w).Encode(
+		map[string]string{
+			"short_code": code,
+		},
+	)
 }
 
 func generateCode(
