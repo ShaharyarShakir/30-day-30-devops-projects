@@ -1,0 +1,37 @@
+[project]
+name = "resume-ai-platform"
+version = "1.0.0"
+description = "AI-powered resume screening & job matching platform"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mlflow==2.14.1",
+    "scikit-learn>=1.4.0",
+    "xgboost>=2.0.0",
+    "lightgbm>=4.0.0",
+    "pandas>=2.0.0",
+    "numpy>=2.0.0",
+    "pyarrow>=24.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "boto3>=1.34.0",
+    "psycopg2-binary>=2.9.9",
+    "sqlmodel>=0.0.16",
+    "pgvector>=0.2.5",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pypdf>=4.1.0",
+    "python-multipart>=0.0.9",
+    "alembic>=1.13.1"
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0"
+]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
