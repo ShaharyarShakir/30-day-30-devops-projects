@@ -1,9 +1,10 @@
 import os
-import json
 import time
 import logging
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from datetime import datetime
+from sqlmodel import SQLModel, create_engine, Session, select
+
+from app.models import Resume, ResumeFeature
 
 logger = logging.getLogger(__name__)
 
@@ -13,26 +14,16 @@ DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "postgres")
 DB_NAME = os.getenv("POSTGRES_DB", "resume_ai")
 
-def get_connection():
-    return psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        dbname=DB_NAME
-    )
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+engine = create_engine(DATABASE_URL, echo=False)
 
 def init_db():
     # Database is initialized by microservices, but we run a ping check for synchronization
     err = None
     for i in range(10):
         try:
-            conn = get_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT 1;")
-            conn.commit()
-            cur.close()
-            conn.close()
+            with Session(engine) as session:
+                session.execute(select(1))
             logger.info("Worker database connection check succeeded")
             return
         except Exception as e:
@@ -45,48 +36,40 @@ def update_resume_status(resume_id: int, status: str, error_message: str = None)
     """
     Updates the status and optional error message of a resume.
     """
-    conn = get_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE resumes
-                SET status = %s, error_message = %s
-                WHERE id = %s;
-                """,
-                (status, error_message, resume_id)
-            )
-            conn.commit()
+    with Session(engine) as session:
+        db_resume = session.get(Resume, resume_id)
+        if db_resume:
+            db_resume.status = status
+            db_resume.error_message = error_message
+            session.add(db_resume)
+            session.commit()
             logger.info(f"Updated resume ID {resume_id} status to {status}")
-    finally:
-        conn.close()
 
 def save_features(resume_id: int, embedding: list, skills: list, experience_years: float, education: dict) -> dict:
     """
     Saves/Upserts the parsed features and embeddings in the database.
     """
-    embedding_str = "[" + ",".join(map(str, embedding)) + "]"
-    
-    conn = get_connection()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
-                INSERT INTO resume_features (resume_id, embedding, skills, experience_years, education)
-                VALUES (%s, %s::vector, %s, %s, %s)
-                ON CONFLICT (resume_id) 
-                DO UPDATE SET 
-                    embedding = EXCLUDED.embedding,
-                    skills = EXCLUDED.skills,
-                    experience_years = EXCLUDED.experience_years,
-                    education = EXCLUDED.education,
-                    processed_at = CURRENT_TIMESTAMP
-                RETURNING id, resume_id, skills, experience_years, education;
-                """,
-                (resume_id, embedding_str, json.dumps(skills), experience_years, json.dumps(education))
+    with Session(engine) as session:
+        statement = select(ResumeFeature).where(ResumeFeature.resume_id == resume_id)
+        db_feature = session.exec(statement).first()
+        
+        if not db_feature:
+            db_feature = ResumeFeature(
+                resume_id=resume_id,
+                embedding=embedding,
+                skills=skills,
+                experience_years=experience_years,
+                education=education
             )
-            result = cur.fetchone()
-            conn.commit()
-            return dict(result)
-    finally:
-        conn.close()
+            session.add(db_feature)
+        else:
+            db_feature.embedding = embedding
+            db_feature.skills = skills
+            db_feature.experience_years = experience_years
+            db_feature.education = education
+            db_feature.processed_at = datetime.utcnow()
+            session.add(db_feature)
+            
+        session.commit()
+        session.refresh(db_feature)
+        return db_feature.model_dump()
