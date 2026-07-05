@@ -1,5 +1,7 @@
 .PHONY: up down restart logs status clean dvc-init
 
+up-dev:
+	docker compose up  --build
 up:
 	docker compose up -d --build
 

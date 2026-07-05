@@ -1,5 +1,5 @@
 # Env / secrets
-.env
+
 *.env.local
 
 # Python
