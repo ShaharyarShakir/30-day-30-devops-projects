@@ -9,4 +9,9 @@ aiokafka==0.10.0
 sqlmodel==0.0.16
 alembic==1.13.1
 pgvector==0.2.5
+opentelemetry-api==1.23.0
+opentelemetry-sdk==1.23.0
+opentelemetry-instrumentation-fastapi==0.44b0
+opentelemetry-exporter-otlp==1.23.0
+python-json-logger==2.0.7
 
