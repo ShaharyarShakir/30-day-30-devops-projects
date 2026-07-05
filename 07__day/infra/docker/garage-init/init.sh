@@ -32,7 +32,7 @@ else
 fi
 
 # Create required buckets
-for bucket in datasets models artifacts; do
+for bucket in datasets models artifacts resumes; do
   if garage -c /etc/garage.toml bucket info "$bucket" >/dev/null 2>&1; then
     echo "Bucket $bucket already exists."
   else
