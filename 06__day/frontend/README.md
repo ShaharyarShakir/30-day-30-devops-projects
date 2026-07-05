@@ -1,42 +1,86 @@
-# sv
+# URL Shortener Frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+This is the web client frontend for the URL Shortener application. It is built as a single-page application (SPA) using **SvelteKit** and styled with **Tailwind CSS**.
 
-## Creating a project
+---
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Tech Stack
 
-```sh
-# create a new project
-npx sv create my-app
+- **Framework**: SvelteKit (Svelte 5)
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **Language**: TypeScript
+- **Runtime**: Node.js 24 (production)
+
+---
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+    User[End User] -->|Interacts with| UI[SvelteKit UI Component]
+    UI -->|Triggers| Actions[State / Actions]
+    Actions -->|HTTP POST /api/v1/shorten| API[Go Backend API]
+    API -->|Persists URL| DB[(PostgreSQL)]
+    API -->|Returns Short URL| Actions
+    Actions -->|Displays short link| UI
 ```
 
-To recreate this project with the same configuration:
+---
 
-```sh
-# recreate this project
-npx sv@0.16.1 create --template minimal --types ts --add prettier eslint tailwindcss="plugins:none" sveltekit-adapter="adapter:auto" --install npm frontend
+## Running Locally
+
+### Option A: Via Docker Compose (Recommended)
+
+The frontend is pre-configured to run alongside the API and database services using Docker Compose.
+
+```bash
+# In the project root:
+docker compose up --build
 ```
 
-## Developing
+This serves the frontend at [http://localhost:5173](http://localhost:5173).
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### Option B: Standalone / Bare Metal
 
-```sh
-npm run dev
+1. Make sure you have **Node.js** (v24 or newer) installed.
+2. Navigate to the `frontend` folder:
+   ```bash
+   cd frontend
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Define the backend API endpoint (default is `http://localhost:8080`):
+   ```bash
+   export VITE_API_URL=http://localhost:8080
+   ```
+5. Start the Vite local development server:
+   ```bash
+   npm run dev
+   ```
+   Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+---
+
+## Running in Production
+
+### Docker Build
+
+The production Dockerfile builds the static assets and starts a Node production server using the SvelteKit build output:
+
+```bash
+# Build the production target image
+docker build --target production -t url-shortener-frontend:latest .
+
+# Run the container (listening on port 3000)
+docker run -p 3000:3000 \
+  -e VITE_API_URL=http://your-production-backend-api \
+  url-shortener-frontend:latest
 ```
 
-## Building
+### Kubernetes Deployment
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- In production, the frontend is deployed to Kubernetes via the Helm chart.
+- It runs 2 replicas by default and is exposed via a Kubernetes Ingress Controller.
