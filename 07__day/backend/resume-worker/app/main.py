@@ -4,15 +4,10 @@ import sys
 
 from app.db import init_db
 from workers.consumer import start_consumer
+from app.logging_config import setup_logging
 
 # Setup Logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+setup_logging("resume-worker")
 logger = logging.getLogger("resume-worker")
 
 async def main():
