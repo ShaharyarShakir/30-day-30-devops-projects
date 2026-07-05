@@ -1,12 +1,19 @@
 package storage
 
-import "context"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+)
 
 func (p *Postgres) CreateURL(
 	ctx context.Context,
 	originalURL string,
 	shortCode string,
 ) error {
+	ctx, span := otel.Tracer("url-shortener").Start(ctx, "postgres.insert_url")
+	defer span.End()
+
 	query := `
 	INSERT INTO urls (
 		original_url,
@@ -22,6 +29,10 @@ func (p *Postgres) CreateURL(
 		shortCode,
 	)
 
+	if err != nil {
+		span.RecordError(err)
+	}
+
 	return err
 }
 
@@ -29,6 +40,9 @@ func (p *Postgres) GetURL(
 	ctx context.Context,
 	shortCode string,
 ) (string, error) {
+	ctx, span := otel.Tracer("url-shortener").Start(ctx, "postgres.get_url")
+	defer span.End()
+
 	query := `
 	SELECT original_url
 	FROM urls
@@ -42,6 +56,10 @@ func (p *Postgres) GetURL(
 		query,
 		shortCode,
 	).Scan(&url)
+
+	if err != nil {
+		span.RecordError(err)
+	}
 
 	return url, err
 }
