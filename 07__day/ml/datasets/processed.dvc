@@ -1,0 +1,5 @@
+# DVC dataset tracking file
+outs:
+- md5: 23d8c1c53e00be8f5723b7ef3f24bf78
+  size: 15206
+  path: processed
