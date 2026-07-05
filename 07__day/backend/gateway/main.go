@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -260,7 +262,7 @@ func authMiddleware(next http.Handler) http.Handler {
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		sub, email, err := validateJWT(tokenStr, jwtSecret)
+		sub, email, role, err := validateJWT(tokenStr, jwtSecret)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
@@ -271,14 +273,65 @@ func authMiddleware(next http.Handler) http.Handler {
 		// Inject headers for downstream services
 		r.Header.Set("X-User-ID", sub)
 		r.Header.Set("X-User-Email", email)
+		r.Header.Set("X-User-Role", role)
+
+		// RBAC Enforcements
+		// Allow /api/inference only for recruiter or admin role
+		if strings.HasPrefix(path, "/api/inference") && role != "recruiter" && role != "admin" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte(`{"error": "Forbidden: Requires recruiter or admin role"}`))
+			return
+		}
 
 		next.ServeHTTP(w, r)
 	})
 }
 
+func generateRandomHex(n int) string {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "unknown"
+	}
+	return hex.EncodeToString(b)
+}
+
 func loggingAndMetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
+
+		// 1. Get or generate trace_id
+		traceID := r.Header.Get("X-Trace-ID")
+		if traceID == "" {
+			traceparent := r.Header.Get("traceparent")
+			if strings.HasPrefix(traceparent, "00-") {
+				parts := strings.Split(traceparent, "-")
+				if len(parts) >= 3 {
+					traceID = parts[1]
+				}
+			}
+		}
+		if traceID == "" {
+			traceID = generateRandomHex(16) // 32 hex chars
+		}
+
+		// 2. Get or generate request_id
+		requestID := r.Header.Get("X-Request-ID")
+		if requestID == "" {
+			requestID = generateRandomHex(16)
+		}
+
+		// Set headers so downstream proxies and services get them
+		r.Header.Set("X-Trace-ID", traceID)
+		r.Header.Set("X-Request-ID", requestID)
+
+		// Set traceparent header if not present for OTel compatibility downstream
+		if r.Header.Get("traceparent") == "" {
+			parentID := generateRandomHex(8) // 16 hex chars
+			r.Header.Set("traceparent", fmt.Sprintf("00-%s-%s-01", traceID, parentID))
+		}
+
 		sw := &statusWriter{ResponseWriter: w}
 		
 		next.ServeHTTP(sw, r)
@@ -289,23 +342,48 @@ func loggingAndMetricsMiddleware(next http.Handler) http.Handler {
 			status = http.StatusOK
 		}
 
-		log.Printf("%s %s %s | Status: %d | Duration: %dms", r.Method, r.URL.Path, r.RemoteAddr, status, durationMs)
+		userID := r.Header.Get("X-User-ID")
+		role := r.Header.Get("X-User-Role")
+
+		// Structured JSON log output
+		logData := map[string]interface{}{
+			"time":        time.Now().Format(time.RFC3339),
+			"level":       "INFO",
+			"message":     fmt.Sprintf("%s %s | Status: %d | Duration: %dms", r.Method, r.URL.Path, status, durationMs),
+			"trace_id":    traceID,
+			"request_id":  requestID,
+			"user_id":     userID,
+			"role":        role,
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"status":      status,
+			"duration_ms": durationMs,
+			"remote_ip":   r.RemoteAddr,
+		}
+
+		logJSON, err := json.Marshal(logData)
+		if err == nil {
+			fmt.Println(string(logJSON))
+		} else {
+			log.Printf("Failed to marshal JSON log: %v", err)
+		}
+
 		globalMetrics.Record(r.Method, r.URL.Path, status, durationMs)
 	})
 }
 
 // --- JWT Decoder & Validator ---
-func validateJWT(tokenStr string, secret []byte) (userID string, email string, err error) {
+func validateJWT(tokenStr string, secret []byte) (userID string, email string, role string, err error) {
 	parts := strings.Split(tokenStr, ".")
 	if len(parts) != 3 {
-		return "", "", errors.New("invalid token format")
+		return "", "", "", errors.New("invalid token format")
 	}
 
 	// Verify HMAC-SHA256 signature
 	signingInput := parts[0] + "." + parts[1]
 	sigBytes, err := base64.RawURLEncoding.DecodeString(parts[2])
 	if err != nil {
-		return "", "", errors.New("failed to decode signature")
+		return "", "", "", errors.New("failed to decode signature")
 	}
 
 	mac := hmac.New(sha256.New, secret)
@@ -313,24 +391,24 @@ func validateJWT(tokenStr string, secret []byte) (userID string, email string, e
 	expectedSig := mac.Sum(nil)
 
 	if !hmac.Equal(sigBytes, expectedSig) {
-		return "", "", errors.New("invalid signature")
+		return "", "", "", errors.New("invalid signature")
 	}
 
 	// Decode payload
 	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return "", "", errors.New("failed to decode payload")
+		return "", "", "", errors.New("failed to decode payload")
 	}
 
 	var claims map[string]interface{}
 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return "", "", errors.New("failed to parse claims JSON")
+		return "", "", "", errors.New("failed to parse claims JSON")
 	}
 
 	// Validate expiration
 	expVal, ok := claims["exp"]
 	if !ok {
-		return "", "", errors.New("missing exp claim")
+		return "", "", "", errors.New("missing exp claim")
 	}
 	var exp int64
 	switch v := expVal.(type) {
@@ -339,20 +417,20 @@ func validateJWT(tokenStr string, secret []byte) (userID string, email string, e
 	case string:
 		exp, err = strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			return "", "", errors.New("invalid exp claim format")
+			return "", "", "", errors.New("invalid exp claim format")
 		}
 	default:
-		return "", "", errors.New("invalid exp claim type")
+		return "", "", "", errors.New("invalid exp claim type")
 	}
 
 	if time.Now().Unix() > exp {
-		return "", "", errors.New("token has expired")
+		return "", "", "", errors.New("token has expired")
 	}
 
 	// Extract sub and email
 	subVal, ok := claims["sub"]
 	if !ok {
-		return "", "", errors.New("missing sub claim")
+		return "", "", "", errors.New("missing sub claim")
 	}
 	var sub string
 	switch v := subVal.(type) {
@@ -361,7 +439,7 @@ func validateJWT(tokenStr string, secret []byte) (userID string, email string, e
 	case float64:
 		sub = strconv.Itoa(int(v))
 	default:
-		return "", "", errors.New("invalid sub claim type")
+		return "", "", "", errors.New("invalid sub claim type")
 	}
 
 	emailStr := ""
@@ -371,7 +449,14 @@ func validateJWT(tokenStr string, secret []byte) (userID string, email string, e
 		}
 	}
 
-	return sub, emailStr, nil
+	roleStr := "candidate"
+	if roleVal, exists := claims["role"]; exists {
+		if val, ok := roleVal.(string); ok {
+			roleStr = val
+		}
+	}
+
+	return sub, emailStr, roleStr, nil
 }
 
 // --- Handler Functions ---
