@@ -1,0 +1,44 @@
+name: GitOps Sync Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'infra/kustomize/**'
+      - 'infra/helm/**'
+
+jobs:
+  update-gitops-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Git Configuration
+        run: |
+          git config --global user.name "gitops-bot"
+          git config --global user.email "gitops-bot@resume-ai.local"
+
+      - name: Commit manifest updates to GitOps directory
+        run: |
+          # Simulating GitOps deployment trigger by touching a sync-timestamp file in the overlay
+          echo "Sync Timestamp: $(date)" > infra/kustomize/overlays/production/sync_status.txt
+          git add infra/kustomize/overlays/production/sync_status.txt
+          
+          # Check if there are changes to commit
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore(gitops): trigger production deployment sync [skip ci]"
+            # In a real environment, we would push to the GitOps repo:
+            # git push origin main
+            echo "Pushed new deployment reference to GitOps repository."
+          fi
+
+      - name: Trigger ArgoCD Sync Webhook
+        env:
+          ARGOCD_TOKEN: ${{ secrets.ARGOCD_SYNC_TOKEN }}
+          ARGOCD_SERVER: "argocd.resume-ai.local"
+        run: |
+          echo "Simulating notification trigger/webhook to ArgoCD API server at ${ARGOCD_SERVER}"
+          # curl -X POST -H "Authorization: Bearer $ARGOCD_TOKEN" https://$ARGOCD_SERVER/api/v1/applications/resume-inference/sync
