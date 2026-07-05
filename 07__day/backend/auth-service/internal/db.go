@@ -54,6 +54,12 @@ func InitDB() {
 	if _, err := DB.Exec(query); err != nil {
 		log.Fatalf("Failed to create users table: %v", err)
 	}
+
+	// Add role column if not exists
+	roleQuery := `ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'candidate';`
+	if _, err := DB.Exec(roleQuery); err != nil {
+		log.Fatalf("Failed to alter users table for role: %v", err)
+	}
 	log.Println("Database schema verified/created successfully")
 }
 
