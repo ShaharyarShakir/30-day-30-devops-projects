@@ -22,7 +22,9 @@ dependencies = [
     "uvicorn>=0.28.0",
     "pypdf>=4.1.0",
     "python-multipart>=0.0.9",
-    "alembic>=1.13.1"
+    "alembic>=1.13.1",
+    "kfp>=2.0.0",
+    "scipy>=1.10.0"
 ]
 
 [dependency-groups]
