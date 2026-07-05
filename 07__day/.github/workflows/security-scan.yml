@@ -1,0 +1,81 @@
+name: Security & Vulnerability Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight
+
+jobs:
+  trivy-image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Gateway Image for Scanning
+        run: |
+          docker build -t resume-ai/gateway:scan ./backend/gateway
+
+      - name: Run Trivy vulnerability scanner on Gateway
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'resume-ai/gateway:scan'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  kubernetes-manifest-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run kube-linter on Kubernetes manifests
+        uses: stackrox/kube-linter-action@v1.0.4
+        with:
+          directory: infra/kubernetes
+          config: .github/kube-linter-config.yaml
+        continue-on-error: true
+
+  dependency-vulnerability-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck on Go Gateway
+        run: |
+          cd backend/gateway
+          govulncheck ./...
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run pip-audit on Python services
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          
+          echo "Auditing Resume Service..."
+          pip-audit -r backend/resume-service/requirements.txt
+          
+          echo "Auditing ML Service..."
+          pip-audit -r backend/ml-service/requirements.txt
+          
+          echo "Auditing Resume Worker..."
+          pip-audit -r backend/resume-worker/requirements.txt
