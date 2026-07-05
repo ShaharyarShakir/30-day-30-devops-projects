@@ -9,12 +9,11 @@ from aiokafka import AIOKafkaProducer
 
 from app.db import init_db, insert_resume, get_resume, delete_resume
 from app.s3 import upload_pdf, delete_pdf
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from app.logging_config import instrument_app
 
 app = FastAPI(title="Resume Service", version="1.0.0")
+instrument_app(app, "resume-service")
+logger = logging.getLogger("resume-service")
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
 KAFKA_TOPIC = "resume-uploaded"
@@ -90,16 +89,23 @@ async def upload_file(
         
         # Publish upload event to Kafka
         if producer:
+            from opentelemetry import trace
+            current_span = trace.get_current_span()
+            trace_id = None
+            if current_span and current_span.get_span_context().is_valid:
+                trace_id = format(current_span.get_span_context().trace_id, '032x')
+
             event_payload = {
                 "resume_id": metadata["id"],
                 "user_id": metadata["user_id"],
-                "object_key": metadata["object_key"]
+                "object_key": metadata["object_key"],
+                "trace_id": trace_id
             }
             try:
                 await producer.send_and_wait(KAFKA_TOPIC, json.dumps(event_payload).encode("utf-8"))
-                logger.info(f"Published upload event to Kafka topic '{KAFKA_TOPIC}' for resume ID {metadata['id']}")
+                logger.info(f"Published upload event to Kafka topic '{KAFKA_TOPIC}' for resume ID {metadata['id']}", extra={"trace_id": trace_id})
             except Exception as ke:
-                logger.error(f"Failed to publish Kafka event: {ke}")
+                logger.error(f"Failed to publish Kafka event: {ke}", extra={"trace_id": trace_id})
         else:
             logger.error("Kafka producer not initialized. Event was not published.")
         
@@ -115,7 +121,11 @@ async def upload_file(
         )
 
 @app.get("/resume/{id}")
-def get_resume_by_id(id: int, x_user_id: str = Header(None, alias="X-User-ID")):
+def get_resume_by_id(
+    id: int,
+    x_user_id: str = Header(None, alias="X-User-ID"),
+    x_user_role: str = Header(None, alias="X-User-Role")
+):
     if not x_user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -130,24 +140,29 @@ def get_resume_by_id(id: int, x_user_id: str = Header(None, alias="X-User-ID")):
         )
     
     # Ownership check
-    try:
-        user_id = int(x_user_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid X-User-ID format"
-        )
+    if x_user_role not in ("admin", "recruiter"):
+        try:
+            user_id = int(x_user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid X-User-ID format"
+            )
 
-    if resume["user_id"] != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access forbidden to this resume"
-        )
+        if resume["user_id"] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access forbidden to this resume"
+            )
 
     return resume
 
 @app.delete("/resume/{id}")
-def delete_resume_by_id(id: int, x_user_id: str = Header(None, alias="X-User-ID")):
+def delete_resume_by_id(
+    id: int,
+    x_user_id: str = Header(None, alias="X-User-ID"),
+    x_user_role: str = Header(None, alias="X-User-Role")
+):
     if not x_user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -162,19 +177,20 @@ def delete_resume_by_id(id: int, x_user_id: str = Header(None, alias="X-User-ID"
         )
 
     # Ownership check
-    try:
-        user_id = int(x_user_id)
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid X-User-ID format"
-        )
+    if x_user_role not in ("admin", "recruiter"):
+        try:
+            user_id = int(x_user_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid X-User-ID format"
+            )
 
-    if resume["user_id"] != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access forbidden to this resume"
-        )
+        if resume["user_id"] != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access forbidden to this resume"
+            )
 
     # Delete from S3/Garage
     try:
