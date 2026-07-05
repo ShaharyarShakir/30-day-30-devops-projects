@@ -8,12 +8,11 @@ from pypdf import PdfReader
 from app.db import init_db, get_resume_metadata, save_features, get_similar_resumes, get_features
 from app.s3 import download_pdf
 from app.features import extract_features, generate_embedding
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from app.logging_config import instrument_app
 
 app = FastAPI(title="ML Service", version="1.0.0")
+instrument_app(app, "ml-service")
+logger = logging.getLogger("ml-service")
 
 class PredictRequest(BaseModel):
     resume_id: int
