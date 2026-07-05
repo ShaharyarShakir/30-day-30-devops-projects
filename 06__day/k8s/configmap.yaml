@@ -9,3 +9,5 @@ data:
   DB_HOST: postgres
   DB_PORT: "5432"
   DB_NAME: url_shortener
+  OTEL_SERVICE_NAME: "url-shortener-api"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.monitoring.svc.cluster.local:4317"
