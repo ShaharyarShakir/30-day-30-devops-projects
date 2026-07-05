@@ -46,3 +46,9 @@ ingress:
   className: nginx
 
   host: short.local
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    additionalLabels:
+      release: monitoring
