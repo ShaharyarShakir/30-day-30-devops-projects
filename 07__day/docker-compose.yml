@@ -65,6 +65,7 @@ services:
     env_file: .env
     volumes:
       - ./infra/docker/garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
     networks:
       - resume-ai-net
 
@@ -110,3 +111,97 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - resume-ai-net
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+    container_name: resume-ai-auth
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: super-secret-dev-key
+      PORT: 8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - resume-ai-net
+
+  resume-service:
+    build:
+      context: ./backend/resume-service
+    container_name: resume-ai-resume
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      GARAGE_ENDPOINT: ${GARAGE_ENDPOINT}
+      GARAGE_ACCESS_KEY_ID: ${GARAGE_ACCESS_KEY_ID}
+      GARAGE_SECRET_ACCESS_KEY: ${GARAGE_SECRET_ACCESS_KEY}
+      RESUMES_BUCKET: resumes
+      PORT: 8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      garage-init:
+        condition: service_completed_successfully
+    networks:
+      - resume-ai-net
+
+  ml-service:
+    build:
+      context: ./backend/ml-service
+    container_name: resume-ai-ml
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      GARAGE_ENDPOINT: ${GARAGE_ENDPOINT}
+      GARAGE_ACCESS_KEY_ID: ${GARAGE_ACCESS_KEY_ID}
+      GARAGE_SECRET_ACCESS_KEY: ${GARAGE_SECRET_ACCESS_KEY}
+      RESUMES_BUCKET: resumes
+      PORT: 8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      garage-init:
+        condition: service_completed_successfully
+    networks:
+      - resume-ai-net
+
+  gateway:
+    build:
+      context: ./backend/gateway
+    container_name: resume-ai-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:8081
+      RESUME_SERVICE_URL: http://resume-service:8082
+      ML_SERVICE_URL: http://ml-service:8083
+      JWT_SECRET: super-secret-dev-key
+    depends_on:
+      auth-service:
+        condition: service_started
+      resume-service:
+        condition: service_started
+      ml-service:
+        condition: service_started
+    networks:
+      - resume-ai-net
+
