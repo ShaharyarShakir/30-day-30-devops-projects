@@ -8,7 +8,9 @@
     "kind@latest",
     "mise@latest",
     "act@latest",
-    "kubernetes-helm@latest"
+    "kubernetes-helm@latest",
+    "argocd@latest",
+    "kustomize@latest"
   ],
   "shell": {
     "init_hook": [
