@@ -41,50 +41,70 @@ async def start_consumer():
         return
 
     try:
+        from opentelemetry import trace
         async for msg in consumer:
             try:
                 # Parse event message
                 payload = json.loads(msg.value.decode("utf-8"))
                 resume_id = payload.get("resume_id")
                 object_key = payload.get("object_key")
+                trace_id_str = payload.get("trace_id")
                 
-                logger.info(f"Received upload event for resume ID {resume_id}, object key: {object_key}")
-                
-                if not resume_id or not object_key:
-                    logger.error("Event payload missing resume_id or object_key")
-                    continue
+                # Context propagation: restore trace parent if present
+                parent_context = None
+                if trace_id_str:
+                    try:
+                        import random
+                        from opentelemetry.trace import SpanContext, TraceFlags, NonRecordingSpan
+                        ctx = SpanContext(
+                            trace_id=int(trace_id_str, 16),
+                            span_id=random.getrandbits(64),
+                            is_remote=True,
+                            trace_flags=TraceFlags(0x01)
+                        )
+                        parent_context = trace.set_span_in_context(NonRecordingSpan(ctx))
+                    except Exception as trace_err:
+                        logger.error(f"Failed to parse trace context: {trace_err}")
 
-                # 1. Update status to PROCESSING
-                update_resume_status(resume_id, "processing")
+                tracer = trace.get_tracer("resume-worker")
+                with tracer.start_as_current_span("process_resume", context=parent_context) as span:
+                    logger.info(f"Received upload event for resume ID {resume_id}, object key: {object_key}")
+                    
+                    if not resume_id or not object_key:
+                        logger.error("Event payload missing resume_id or object_key")
+                        continue
 
-                # 2. Download PDF from S3/Garage
-                logger.info(f"Downloading PDF from S3 for resume ID {resume_id}...")
-                pdf_bytes = download_pdf(object_key)
+                    # 1. Update status to PROCESSING
+                    update_resume_status(resume_id, "processing")
 
-                # 3. Parse PDF (Extract text, clean, extract skills, experience, education)
-                logger.info(f"Parsing PDF content and extracting features for resume ID {resume_id}...")
-                parsed_data = parse_pdf_resume(pdf_bytes)
-                
-                # Update status to PROCESSED
-                update_resume_status(resume_id, "processed")
+                    # 2. Download PDF from S3/Garage
+                    logger.info(f"Downloading PDF from S3 for resume ID {resume_id}...")
+                    pdf_bytes = download_pdf(object_key)
 
-                # 4. Generate Embeddings
-                logger.info(f"Generating unit-normalized embedding vector for resume ID {resume_id}...")
-                embedding = generate_embedding(parsed_data["text"])
+                    # 3. Parse PDF (Extract text, clean, extract skills, experience, education)
+                    logger.info(f"Parsing PDF content and extracting features for resume ID {resume_id}...")
+                    parsed_data = parse_pdf_resume(pdf_bytes)
+                    
+                    # Update status to PROCESSED
+                    update_resume_status(resume_id, "processed")
 
-                # 5. Save features and embedding to PostgreSQL
-                logger.info(f"Saving parsed features and vector to database for resume ID {resume_id}...")
-                save_features(
-                    resume_id=resume_id,
-                    embedding=embedding,
-                    skills=parsed_data["skills"],
-                    experience_years=float(parsed_data["experience"]["years"]),
-                    education=parsed_data["education"]
-                )
+                    # 4. Generate Embeddings
+                    logger.info(f"Generating unit-normalized embedding vector for resume ID {resume_id}...")
+                    embedding = generate_embedding(parsed_data["text"])
 
-                # 6. Update status to EMBEDDED
-                update_resume_status(resume_id, "embedded")
-                logger.info(f"Successfully processed and embedded resume ID {resume_id}")
+                    # 5. Save features and embedding to PostgreSQL
+                    logger.info(f"Saving parsed features and vector to database for resume ID {resume_id}...")
+                    save_features(
+                        resume_id=resume_id,
+                        embedding=embedding,
+                        skills=parsed_data["skills"],
+                        experience_years=float(parsed_data["experience"]["years"]),
+                        education=parsed_data["education"]
+                    )
+
+                    # 6. Update status to EMBEDDED
+                    update_resume_status(resume_id, "embedded")
+                    logger.info(f"Successfully processed and embedded resume ID {resume_id}")
 
             except Exception as process_error:
                 logger.error(f"Failed to process resume ID {resume_id if 'resume_id' in locals() else 'unknown'}: {process_error}")
