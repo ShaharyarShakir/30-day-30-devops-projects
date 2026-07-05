@@ -23,12 +23,14 @@ type User struct {
 	ID           int       `json:"id"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
+	Role         string    `json:"role"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 type LoginRequest struct {
@@ -81,6 +83,16 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate role
+	req.Role = strings.TrimSpace(strings.ToLower(req.Role))
+	if req.Role == "" {
+		req.Role = "candidate"
+	}
+	if req.Role != "candidate" && req.Role != "recruiter" && req.Role != "admin" {
+		respondWithError(w, http.StatusBadRequest, "Invalid role. Allowed roles are: candidate, recruiter, admin")
+		return
+	}
+
 	// Check if user already exists
 	var exists bool
 	err := internal.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", req.Email).Scan(&exists)
@@ -105,9 +117,9 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	// Save to DB
 	var user User
 	err = internal.DB.QueryRow(
-		"INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, created_at",
-		req.Email, string(hashedPassword),
-	).Scan(&user.ID, &user.Email, &user.CreatedAt)
+		"INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id, email, role, created_at",
+		req.Email, string(hashedPassword), req.Role,
+	).Scan(&user.ID, &user.Email, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		log.Printf("Database insert error: %v", err)
@@ -135,9 +147,9 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	// Find user
 	var user User
 	err := internal.DB.QueryRow(
-		"SELECT id, email, password_hash, created_at FROM users WHERE email = $1",
+		"SELECT id, email, password_hash, role, created_at FROM users WHERE email = $1",
 		req.Email,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -159,6 +171,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub":   strconv.Itoa(user.ID),
 		"email": user.Email,
+		"role":  user.Role,
 		"exp":   time.Now().Add(24 * time.Hour).Unix(),
 		"iat":   time.Now().Unix(),
 	})
@@ -207,9 +220,9 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 
 	var user User
 	err = internal.DB.QueryRow(
-		"SELECT id, email, created_at FROM users WHERE id = $1",
+		"SELECT id, email, role, created_at FROM users WHERE id = $1",
 		userID,
-	).Scan(&user.ID, &user.Email, &user.CreatedAt)
+	).Scan(&user.ID, &user.Email, &user.Role, &user.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
