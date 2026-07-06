@@ -1,0 +1,51 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/shaharyarshakir/chaindeploy-api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  hosts:
+    - host: api.chaindeploy.dev
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+env:
+  API_PORT: "3000"
+  DATABASE_URL: "postgresql://postgres:postgres@postgres-postgresql:5432/chaindeploy"
+  REDIS_URL: "redis://redis-master:6379"
+  VAULT_ADDR: "http://vault:8200"
+  JWT_ACCESS_TTL: "15m"
+  JWT_REFRESH_TTL: "7d"
+  GITHUB_CALLBACK_URL: "http://app.chaindeploy.dev/auth/github/callback"
+
+vault:
+  enabled: true
+  role: "chaindeploy-role"
+  secretPath: "secret/data/chaindeploy"
