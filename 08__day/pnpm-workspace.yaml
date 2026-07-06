@@ -4,5 +4,7 @@ packages:
   - 'services/*'
 allowBuilds:
   '@nestjs/core': true
+  '@parcel/watcher': true
   '@scarf/scarf': true
+  esbuild: true
   msgpackr-extract: true
