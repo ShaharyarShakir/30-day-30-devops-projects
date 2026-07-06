@@ -1,0 +1,74 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: resume-ai-alerts
+  namespace: monitoring
+  labels:
+    role: alert-rules
+    release: prometheus-stack
+spec:
+  groups:
+    - name: resume-ai-platform.rules
+      rules:
+        - alert: HighApiLatency
+          expr: sum(rate(http_request_duration_ms_total_sum[5m])) / sum(rate(http_request_duration_ms_total_count[5m])) > 1000
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High API Gateway latency detected"
+            description: "Average API Gateway response latency is {{ $value }}ms, exceeding the threshold of 1000ms."
+
+        - alert: HighErrorRate
+          expr: sum(rate(http_requests_total{status=~"5.*"}[5m])) / sum(rate(http_requests_total[5m])) * 100 > 5
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High HTTP 5xx error rate detected"
+            description: "HTTP 5xx error rate is {{ $value }}%, exceeding 5% in the last 5 minutes."
+
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[5m]) * 60 > 2
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod crashlooping detected"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times per minute."
+
+        - alert: FailedTrainingJobs
+          expr: mlflow_run_status{status="FAILED"} > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Failed ML training run detected"
+            description: "MLflow run {{ $labels.run_id }} for model {{ $labels.model_name }} has failed."
+
+        - alert: KafkaQueueBacklog
+          expr: sum(kafka_consumergroup_lag{topic="resume-uploaded"}) > 100
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kafka queue backlog growing"
+            description: "Kafka consumer group {{ $labels.consumergroup }} lag is {{ $value }} messages on topic resume-uploaded."
+
+        - alert: LowDiskSpace
+          expr: node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 10
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Low node disk space available"
+            description: "Mountpoint {{ $labels.mountpoint }} on node {{ $labels.instance }} has only {{ $value }}% free space."
+
+        - alert: ModelDeploymentFailed
+          expr: kserve_inferenceservice_ready{inferenceservice="candidate-ranker"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "KServe model deployment failed"
+            description: "The InferenceService {{ $labels.inferenceservice }} in namespace {{ $labels.namespace }} is not ready."

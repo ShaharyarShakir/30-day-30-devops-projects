@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kserve-metrics-monitor
+  namespace: ml-serving
+  labels:
+    release: prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      serving.kserve.io/inferenceservice: candidate-ranker
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
