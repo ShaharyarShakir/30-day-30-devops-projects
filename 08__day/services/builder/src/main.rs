@@ -67,44 +67,89 @@ async fn main() {
     let mut conn = redis_client.get_connection().expect("Failed to get Redis connection");
     let pubsub_client = redis_client.clone();
 
+    // Setup signal triggers for graceful shutdown (Module 12)
+    let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
+    let mut sigint = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt()).unwrap();
+
     loop {
         println!("[BUILDER] Waiting for build jobs...");
-        let pop_res: Result<Option<(String, String)>, redis::RedisError> = 
-            conn.blpop("bull:build.queue:wait", 0.0);
+        
+        tokio::select! {
+            _ = sigterm.recv() => {
+                println!("[BUILDER] SIGTERM received. Shutting down worker loop gracefully...");
+                break;
+            }
+            _ = sigint.recv() => {
+                println!("[BUILDER] SIGINT received. Shutting down worker loop gracefully...");
+                break;
+            }
+            pop_res = async {
+                // Wrap BLPOP block or database queries with retries
+                run_with_backoff(|| async {
+                    let mut conn_retry = redis_client.get_connection()?;
+                    let res: Option<(String, String)> = conn_retry.blpop("bull:build.queue:wait", 10.0)?;
+                    Ok::<Option<(String, String)>, redis::RedisError>(res)
+                }, 3).await
+            } => {
+                match pop_res {
+                    Ok(Some((_list, job_id))) => {
+                        println!("[BUILDER] Found job ID: {}", job_id);
+                        let job_key = format!("bull:build.queue:{}", job_id);
+                        let data_str_res: Result<String, redis::RedisError> = conn.hget(&job_key, "data");
 
-        match pop_res {
-            Ok(Some((_list, job_id))) => {
-                println!("[BUILDER] Found job ID: {}", job_id);
-                let job_key = format!("bull:build.queue:{}", job_id);
-                let data_str_res: Result<String, redis::RedisError> = conn.hget(&job_key, "data");
+                        if let Ok(data_str) = data_str_res {
+                            if let Ok(payload) = serde_json::from_str::<BuildJobPayload>(&data_str) {
+                                println!(
+                                    "[BUILDER] Processing deployment: {} | contract: {} | source_path: {}",
+                                    payload.deployment_id, payload.contract_id, payload.source_path
+                                );
 
-                if let Ok(data_str) = data_str_res {
-                    if let Ok(payload) = serde_json::from_str::<BuildJobPayload>(&data_str) {
-                        println!(
-                            "[BUILDER] Processing deployment: {} | contract: {} | source_path: {}",
-                            payload.deployment_id, payload.contract_id, payload.source_path
-                        );
-
-                        if let Err(e) = handle_build_job(
-                            &db_pool,
-                            &mut conn,
-                            &pubsub_client,
-                            &payload
-                        ).await {
-                            eprintln!("[BUILDER] Error processing build job: {:?}", e);
+                                if let Err(e) = handle_build_job(
+                                    &db_pool,
+                                    &mut conn,
+                                    &pubsub_client,
+                                    &payload
+                                ).await {
+                                    eprintln!("[BUILDER] Error processing build job: {:?}", e);
+                                }
+                            } else {
+                                eprintln!("[BUILDER] Failed to deserialize job payload: {}", data_str);
+                            }
+                        } else {
+                            eprintln!("[BUILDER] Failed to fetch job details for key: {}", job_key);
                         }
-                    } else {
-                        eprintln!("[BUILDER] Failed to deserialize job payload: {}", data_str);
                     }
-                } else {
-                    eprintln!("[BUILDER] Failed to fetch job details for key: {}", job_key);
+                    Err(e) => {
+                        eprintln!("[BUILDER] Redis BLPOP failed with retries: {:?}", e);
+                        sleep(Duration::from_secs(2)).await;
+                    }
+                    _ => {}
                 }
             }
-            Err(e) => {
-                eprintln!("[BUILDER] Redis BLPOP error: {:?}", e);
-                sleep(Duration::from_secs(2)).await;
-            }
-            _ => {}
         }
     }
+}
+
+// Exponential backoff utility (Module 12)
+async fn run_with_backoff<F, T, E, Fut>(mut f: F, max_retries: u32) -> Result<T, E>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, E>>,
+    E: std::fmt::Debug,
+{
+    let mut delay = std::time::Duration::from_secs(1);
+    for attempt in 1..=max_retries {
+        match f().await {
+            Ok(val) => return Ok(val),
+            Err(e) => {
+                if attempt == max_retries {
+                    return Err(e);
+                }
+                eprintln!("[RETRY] Attempt {} failed: {:?}. Retrying in {:?}", attempt, e, delay);
+                tokio::time::sleep(delay).await;
+                delay *= 2;
+            }
+        }
+    }
+    unreachable!()
 }
