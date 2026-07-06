@@ -1,0 +1,280 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "title": "Platform - CPU Utilization",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(node_cpu_seconds_total{mode!=\"idle\"}) by (instance) / sum(node_cpu_seconds_total) by (instance) * 100",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "title": "Platform - Memory Utilization",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "title": "Platform - Pod Restarts",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(changes(kube_pod_container_status_restarts_total[5m])) by (pod)",
+          "legendFormat": "{{pod}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 4,
+      "title": "APIs - Request Rate (RPS)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(http_requests_total[1m])) by (path)",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 5,
+      "title": "APIs - Average Latency (ms)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(http_request_duration_ms_total_sum[5m])) by (path) / sum(rate(http_request_duration_ms_total_count[5m])) by (path)",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 6,
+      "title": "APIs - HTTP Error Rate (%)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(http_requests_total{status=~\"5.*\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+          "legendFormat": "Error Rate"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "id": 7,
+      "title": "MLOps - Active Model Status",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "kserve_inferenceservice_ready{inferenceservice=\"candidate-ranker\"}",
+          "legendFormat": "Active"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "id": 8,
+      "title": "MLOps - Prediction Throughput (TPS)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(rate(kserve_predictor_request_duration_seconds_count{inferenceservice=\"candidate-ranker\"}[1m])) by (inferenceservice)"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "id": 9,
+      "title": "MLOps - Training Run Success Rate (%)",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(mlflow_run_status{status=\"FINISHED\"}) / (sum(mlflow_run_status{status=\"FINISHED\"}) + sum(mlflow_run_status{status=\"FAILED\"})) * 100"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "id": 10,
+      "title": "Business - Resumes Uploaded (Total)",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(http_requests_total{method=\"POST\",path=\"/api/resumes\"}[24h]))"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "id": 11,
+      "title": "Business - Processing Success Rate (%)",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(resume_status{status=\"embedded\"}) / (sum(resume_status{status=\"embedded\"}) + sum(resume_status{status=\"failed\"})) * 100"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "id": 12,
+      "title": "Business - Avg Candidate Match Score",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg(resume_match_score)"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "title": "Resume AI Platform - Production Dashboards",
+  "uid": "resume-ai-production-dashboards",
+  "version": 1
+}
