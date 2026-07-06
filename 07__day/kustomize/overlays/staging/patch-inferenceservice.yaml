@@ -1,0 +1,18 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: candidate-ranker
+  annotations:
+    autoscaling.knative.dev/min-scale: "0"
+    autoscaling.knative.dev/max-scale: "2"
+    autoscaling.knative.dev/target: "5"
+spec:
+  predictor:
+    model:
+      resources:
+        limits:
+          cpu: "500m"
+          memory: "1Gi"
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
