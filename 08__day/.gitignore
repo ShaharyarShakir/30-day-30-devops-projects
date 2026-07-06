@@ -1,0 +1,20 @@
+# Env / secrets
+.env
+*.env.local
+
+# Node (frontend, NestJS api)
+node_modules/
+dist/
+build/
+.turbo/
+
+# Rust
+target/
+Cargo.lock
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Docker volumes are managed by Docker, not git
