@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resume-service-vault
+  namespace: resume-ai
+  labels:
+    app: resume-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: resume-service
+  template:
+    metadata:
+      labels:
+        app: resume-service
+      annotations:
+        # Vault Agent Injector configuration
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "resume-service-role"
+        
+        # Inject PostgreSQL credentials
+        vault.hashicorp.com/agent-inject-secret-database-config: "database/creds/resume-service-db-role"
+        vault.hashicorp.com/agent-inject-template-database-config: |
+          {{- with secret "database/creds/resume-service-db-role" -}}
+          export POSTGRES_USER="{{ .Data.username }}"
+          export POSTGRES_PASSWORD="{{ .Data.password }}"
+          {{- end -}}
+          
+        # Inject Garage storage credentials
+        vault.hashicorp.com/agent-inject-secret-garage-config: "secret/data/resume-ai/garage"
+        vault.hashicorp.com/agent-inject-template-garage-config: |
+          {{- with secret "secret/data/resume-ai/garage" -}}
+          export GARAGE_ACCESS_KEY_ID="{{ .Data.data.access_key_id }}"
+          export GARAGE_SECRET_ACCESS_KEY="{{ .Data.data.secret_access_key }}"
+          {{- end -}}
+    spec:
+      serviceAccountName: resume-service-sa
+      containers:
+        - name: resume-service
+          image: resume-ai/resume-service:latest
+          ports:
+            - containerPort: 8082
+          # Source secrets dynamically before starting the main process
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -f /vault/secrets/database-config ]; then
+                . /vault/secrets/database-config
+              fi
+              if [ -f /vault/secrets/garage-config ]; then
+                . /vault/secrets/garage-config
+              fi
+              exec uvicorn app.main:app --host 0.0.0.0 --port 8082
