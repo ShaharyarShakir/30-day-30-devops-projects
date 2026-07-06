@@ -1,0 +1,32 @@
+namespace: ml-serving
+
+storage:
+  s3Endpoint: "garage.resume-ai-net:3900"
+  useHttps: "0"
+  verifySsl: "0"
+  region: "us-east-1"
+  accessKeyId: "garage_access_key_id"
+  secretAccessKey: "garage_secret_access_key"
+
+predictor:
+  name: candidate-ranker
+  modelFormat: sklearn
+  storageUri: "s3://models/candidate-ranker"
+  resources:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+
+autoscaling:
+  metric: "concurrency"
+  target: 10
+  minScale: 0
+  maxScale: 5
+
+canary:
+  enabled: false
+  percent: 10
+  canaryStorageUri: "s3://models/candidate-ranker-canary"
