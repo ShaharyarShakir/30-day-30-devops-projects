@@ -1,122 +1,155 @@
-# Multi-Chain Smart Contract Deployment Platform
+# ChainDeploy: Enterprise Web3 DevOps & Platform Engineering
 
-Lets developers create projects, build & test smart contracts, deploy to multiple
-blockchains (Ethereum, Solana — Polygon/Base/Arbitrum later), verify contracts,
-monitor deployments, roll back, manage secrets, and view analytics.
+ChainDeploy is a multi-tenant Web3 smart contract deployment and DevOps platform. It provides enterprise-grade GitOps delivery pipelines, secure key management via HashiCorp Vault, multi-chain smart contract compilation, transaction signing, real-time index auditing, and centralized telemetry dashboards.
 
-## Architecture
+---
 
-```
-                    React Frontend
-                          │
-                          ▼
-                    NestJS API Gateway
-                          │
-      ┌───────────────────┼───────────────────┐
-      ▼                   ▼                   ▼
- Authentication     Deployment API      Project API
-                          │
-                     PostgreSQL
-                          │
-                     RabbitMQ Queue
-                          │
-          ┌───────────────┴───────────────┐
-          ▼                               ▼
-    Rust Build Worker              Rust Deploy Worker
-          │                               │
-          └───────────────┬───────────────┘
-                          ▼
-                  Blockchain Networks
-             Ethereum / Solana / Base
-```
+## Final Architecture
 
-## Tech Stack
-
-| Layer | Tools |
-|---|---|
-| Frontend | React, Vite, TanStack Router/Query, shadcn/ui, Tailwind CSS |
-| API | NestJS (auth, users, projects, deployments) |
-| Blockchain Service | Rust — compilation, wallet management, signing, deployment, verification |
-| Worker Service | Rust — RabbitMQ consumer, long-running deploy jobs, event indexing |
-| Data | PostgreSQL, RabbitMQ |
-| Secrets | HashiCorp Vault |
-| DevOps | Docker, Kubernetes, Helm, Kustomize, GitHub Actions, ArgoCD |
-| Observability | Prometheus, Grafana, Loki, OpenTelemetry, Jaeger |
-
-## Sprint Roadmap
-
-- [x] **Sprint 1 — Foundation**: repo structure, Docker Compose (Postgres, RabbitMQ, Vault dev), DB schema
-- [ ] **Sprint 2**: NestJS API — JWT + refresh token auth, GitHub OAuth, wallet linking, users/projects CRUD
-- [ ] **Sprint 3**: Rust Build Worker — Solidity compilation (`solc`), Anchor/Solana program builds, consumes build queue
-- [ ] **Sprint 4**: Rust Deploy Worker — `ethers-rs` for EVM chains, `solana-sdk` for Solana, tx signing via Vault-held keys
-- [ ] **Sprint 5**: React frontend — project dashboard, deployment history, wallet management UI
-- [ ] **Sprint 6**: Kubernetes + Helm + Kustomize manifests, Vault integration (replacing dev mode)
-- [ ] **Sprint 7**: GitHub Actions → ArgoCD GitOps pipeline
-- [ ] **Sprint 8**: Observability — Prometheus, Grafana, Loki, OpenTelemetry, Jaeger; dashboards for API latency, deployment duration, gas usage, queue length, worker health
-
-## Sprint 1 — Quickstart
-
-```bash
-cd multichain-deploy-platform
-make up
-make status
+```text
+                    Developers
+                         │
+                         ▼
+                  React Dashboard
+                         │
+                   API Gateway (NestJS)
+                         │
+      ┌──────────────────┼──────────────────┐
+      ▼                  ▼                  ▼
+ Authentication      Organizations     API Keys
+      │                  │                  │
+      └──────────────┬───┴──────────────────┘
+                     ▼
+                Deployment API
+                     │
+        ┌────────────┼────────────┐
+        ▼            ▼            ▼
+ Builder Worker  Deployer Worker Event Indexer
+ (Rust)          (Rust)          (Rust)
+        │            │            │
+        └────────────┼────────────┘
+                     ▼
+      Multi-Chain Networks (EVM, Solana)
+                     │
+                     ▼
+ PostgreSQL • Redis • Vault • Object Storage (Floci S3)
+                     │
+                     ▼
+ Prometheus • Grafana • Loki • Jaeger (Telemetry)
 ```
 
-| Service | URL | Credentials |
-|---|---|---|
-| PostgreSQL | localhost:5432 | postgres / postgres (db: `chaindeploy`) |
-| RabbitMQ Management | http://localhost:15672 | guest / guest |
-| Vault UI | http://localhost:8200 | root token: `root` |
+---
 
-Vault is running in **dev mode** — in-memory, auto-unsealed, root-token auth.
-That's correct for local development only; Sprint 6 replaces it with a properly
-initialized, unsealed, and policy-scoped Vault in Kubernetes.
+## Directory Structure
 
-## Database Schema
-
-Seven tables, created automatically on first `make up` via
-`infra/docker/postgres/01-schema.sql`:
-
-- **users** — email/password or GitHub OAuth, refresh token hash
-- **projects** — owned by a user, optionally linked to a GitHub repo
-- **contracts** — belongs to a project; `chain_family` is `evm` or `solana`
-- **wallets** — a user's signing wallets; the actual key lives in Vault, only
-  the `vault_key_path` is stored in Postgres
-- **deployments** — one per (contract, network) attempt; tracks status,
-  verification status, and `previous_deployment_id` for rollback lineage
-- **transactions** — on-chain tx records per deployment; `gas_used` (EVM) or
-  `fee_lamports` (Solana) depending on `chain_family`
-- **audit_logs** — generic action log (`deployment.created`, `wallet.linked`, etc.)
-
-## Project Structure
-
-```
-multichain-deploy-platform/
-├── frontend/                   # React + Vite (Sprint 5)
-├── backend/
-│   └── api/                    # NestJS (Sprint 2)
+```text
+chaindeploy/
+├── apps/
+│   ├── frontend/               # React + Vite Client Dashboard
+│   └── api/                    # NestJS API Gateway (RBAC, API Keys, Audit Logs)
 ├── services/
-│   ├── blockchain-service/     # Rust: compile, sign, deploy, verify (Sprint 3-4)
-│   └── worker-service/         # Rust: queue consumer, event indexing (Sprint 3-4)
+│   ├── builder/                # Rust: solidity & rust program compiler worker
+│   ├── deployer/               # Rust: transaction signer & chain deployer worker
+│   └── indexer/                # Rust: blockchain log filter & real-time auditor
+├── gitops/
+│   ├── bootstrap/              # ArgoCD App-of-Apps bootstrap manifests
+│   ├── clusters/               # Dev/Prod target environments mappings
+│   ├── applications/
+│   │   ├── charts/             # Service templates (deployment, service, HPA, Ingress)
+│   │   └── overlays/           # Kustomize environment values (Dev, Staging, Prod)
+│   └── infrastructure/         # Shared services (Postgres, Redis, OTel, Loki)
 ├── infra/
-│   ├── docker/
-│   │   └── postgres/01-schema.sql
-│   ├── kubernetes/             # Sprint 6
-│   ├── helm/                   # Sprint 6
-│   └── kustomize/              # Sprint 6
-├── docs/
-├── scripts/
-├── .github/workflows/          # Sprint 7
-├── docker-compose.yml
-├── Makefile
-└── .env
+│   ├── docker/                 # Service-specific configs (Prometheus, Loki, Grafana)
+│   ├── terraform/              # Infrastructure provisioning (VPC, EKS, RDS, Cache)
+│   ├── ansible/                # Node orchestration configuration playbooks
+│   ├── vault/                  # Secret initialization and engine setup scripts
+│   ├── backup/                 # Disaster recovery backup and restore tools
+│   └── opa/                    # Open Policy Agent Admission rego guidelines
+└── docs/                       # Runbooks, Security specs, and API docs
 ```
 
-## Next: Sprint 2
+---
 
-Sprint 2 builds the NestJS API's auth flow:
+## How to Run the Project (Local Integration)
 
-- JWT access tokens + refresh token rotation
-- GitHub OAuth login
-- Wallet linking (address + Vault key path, no raw keys ever touch Postgres)
-- Users and Projects CRUD modules
+We use **Docker Compose** alongside **Floci** (a fast, lightweight cloud emulator replacement for LocalStack) to orchestrate the entire platform topology locally.
+
+### 1. Boot the Stack
+Run the following command at the root of the project:
+```bash
+docker compose up -d
+```
+
+This starts:
+- **Frontend App**: [http://localhost](http://localhost) (port 80)
+- **API Gateway**: [http://localhost:3000](http://localhost:3000)
+- **Rust Workers**: Listening on ports 3001 (builder), 3002 (deployer), and 3003 (indexer)
+- **Vault UI**: [http://localhost:8200](http://localhost:8200) (Token: `root`)
+- **Grafana Dashboards**: [http://localhost:3004](http://localhost:3004) (User: `admin` / Password: `admin`)
+- **Jaeger UI (Tracing)**: [http://localhost:16686](http://localhost:16686)
+- **Loki Server**: [http://localhost:3100](http://localhost:3100)
+- **Floci AWS/GCP Emulator**: [http://localhost:4566](http://localhost:4566)
+
+### 2. Initialize Secrets Engine (Vault)
+Setup keys, policies, and database pointers in Vault:
+```bash
+docker exec -it chaindeploy-vault /bin/sh -c "/vault/file/vault-init.sh"
+# Or run locally if Vault CLI is installed:
+./infra/vault/vault-init.sh
+```
+
+---
+
+## How to Test the Project
+
+### 1. Health Checks Verification
+Verify the components are online and healthy:
+```bash
+# NestJS API Health
+curl http://localhost:3000/health
+
+# Rust Builder Health
+curl http://localhost:3001/health
+
+# Rust Deployer Health
+curl http://localhost:3002/health
+
+# Rust Indexer Health
+curl http://localhost:3003/health
+```
+
+### 2. Run Test Suites
+Execute linting and unit/integration tests:
+
+**For Node services (API/Frontend)**:
+```bash
+pnpm install
+pnpm test
+```
+
+**For Rust Workers**:
+```bash
+cd services
+cargo test
+```
+
+### 3. Disaster Recovery Validation
+Test database and secrets recovery routines:
+```bash
+# Create a timestamped compressed backup package
+./infra/backup/backup.sh
+
+# Restore from a backup archive package
+./infra/backup/restore.sh /var/backups/chaindeploy/backup-archive-name.tar.gz
+```
+
+---
+
+## Kubernetes & Continuous GitOps Delivery
+
+To deploy the production-grade manifests onto your target cluster:
+1. Direct your Argo CD controller to the bootstrap app-of-apps pattern:
+   ```bash
+   kubectl apply -f gitops/bootstrap/root-application.yaml
+   ```
+2. Argo CD will continuously sync the platform configurations across namespaces matching the [ApplicationSet spec](file:///home/shaharyar/01__git_repos/30-day-30-devops-projects/08__day/gitops/bootstrap/applicationset.yaml).
