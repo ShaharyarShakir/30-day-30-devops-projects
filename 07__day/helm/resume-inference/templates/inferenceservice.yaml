@@ -1,0 +1,41 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: {{ .Values.predictor.name }}
+  namespace: {{ .Values.namespace }}
+  annotations:
+    # Knative Autoscaling configs
+    autoscaling.knative.dev/metric: {{ .Values.autoscaling.metric | quote }}
+    autoscaling.knative.dev/target: {{ .Values.autoscaling.target | quote }}
+    autoscaling.knative.dev/min-scale: {{ .Values.autoscaling.minScale | quote }}
+    autoscaling.knative.dev/max-scale: {{ .Values.autoscaling.maxScale | quote }}
+spec:
+  predictor:
+    serviceAccountName: kserve-sa-helm
+    model:
+      modelFormat:
+        name: {{ .Values.predictor.modelFormat | quote }}
+      storageUri: {{ .Values.predictor.storageUri | quote }}
+      resources:
+        limits:
+          cpu: {{ .Values.predictor.resources.limits.cpu | quote }}
+          memory: {{ .Values.predictor.resources.limits.memory | quote }}
+        requests:
+          cpu: {{ .Values.predictor.resources.requests.cpu | quote }}
+          memory: {{ .Values.predictor.resources.requests.memory | quote }}
+{{- if .Values.canary.enabled }}
+  canaryTrafficPercent: {{ .Values.canary.percent }}
+  canary:
+    serviceAccountName: kserve-sa-helm
+    model:
+      modelFormat:
+        name: {{ .Values.predictor.modelFormat | quote }}
+      storageUri: {{ .Values.canary.canaryStorageUri | quote }}
+      resources:
+        limits:
+          cpu: {{ .Values.predictor.resources.limits.cpu | quote }}
+          memory: {{ .Values.predictor.resources.limits.memory | quote }}
+        requests:
+          cpu: {{ .Values.predictor.resources.requests.cpu | quote }}
+          memory: {{ .Values.predictor.resources.requests.memory | quote }}
+{{- end }}
