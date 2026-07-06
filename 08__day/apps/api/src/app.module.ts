@@ -13,6 +13,7 @@ import { DeploymentsModule } from './deployments/deployments.module';
 import { QueuesModule } from './queues/queues.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { HealthModule } from './health/health.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { HealthModule } from './health/health.module';
     QueuesModule,
     WebsocketModule,
     HealthModule,
+    ApiKeysModule,
   ],
 })
 export class AppModule {}
