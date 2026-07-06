@@ -1,0 +1,150 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup-job
+  namespace: resume-ai
+spec:
+  schedule: "0 2 * * *" # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: postgres-backup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-password
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Starting PostgreSQL backup..."
+                  DATE=$(date +%Y%m%d_%H%M%S)
+                  FILENAME="/backups/postgres_backup_${DATE}.sql"
+                  pg_dump -h postgres -U postgres -d resume_ai > ${FILENAME}
+                  echo "Backup complete: ${FILENAME}"
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backups
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: backup-pvc
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: garage-storage-backup-job
+  namespace: resume-ai
+spec:
+  schedule: "0 3 * * *" # Daily at 3 AM
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: garage-backup
+              image: minio/mc:latest
+              env:
+                - name: GARAGE_ACCESS_KEY
+                  value: "garage_access_key_id"
+                - name: GARAGE_SECRET_KEY
+                  value: "garage_secret_access_key"
+                - name: BACKUP_S3_ACCESS_KEY
+                  value: "backup_s3_access_key"
+                - name: BACKUP_S3_SECRET_KEY
+                  value: "backup_s3_secret_key"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Setting up mc client..."
+                  mc alias set src http://garage:3900 ${GARAGE_ACCESS_KEY} ${GARAGE_SECRET_KEY}
+                  mc alias set dest https://s3.amazonaws.com ${BACKUP_S3_ACCESS_KEY} ${BACKUP_S3_SECRET_KEY}
+                  
+                  echo "Mirroring resumes bucket..."
+                  mc mirror src/resumes dest/resume-ai-platform-backups/resumes --overwrite
+                  
+                  echo "Mirroring mlflow artifacts..."
+                  mc mirror src/mlflow dest/resume-ai-platform-backups/mlflow --overwrite
+                  echo "Mirror complete!"
+          restartPolicy: OnFailure
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mlflow-db-backup-job
+  namespace: resume-ai
+spec:
+  schedule: "30 2 * * *" # Daily at 2:30 AM
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mlflow-db-backup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: postgres-password
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Starting MLflow database backup..."
+                  DATE=$(date +%Y%m%d_%H%M%S)
+                  FILENAME="/backups/mlflow_db_backup_${DATE}.sql"
+                  pg_dump -h postgres -U postgres -d mlflow > ${FILENAME}
+                  echo "MLflow DB Backup complete: ${FILENAME}"
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backups
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: backup-pvc
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dvc-metadata-backup-job
+  namespace: resume-ai
+spec:
+  schedule: "0 4 * * *" # Daily at 4 AM
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: dvc-backup
+              image: alpine/git:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Backing up DVC metadata files (.dvc)..."
+                  git clone https://github.com/ShaharyarShakir/30-day-30-devops-projects.git repo
+                  cd repo
+                  tar -cvf /backups/dvc_metadata_$(date +%Y%m%d).tar $(find . -name "*.dvc")
+                  echo "DVC metadata backup complete!"
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backups
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: backup-pvc
