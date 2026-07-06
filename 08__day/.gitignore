@@ -1,12 +1,18 @@
 # Env / secrets
 .env
-*.env.local
+.env.local
+.env.*.local
+*.env
+!*.env.example
 
-# Node (frontend, NestJS api)
+# Node (dependency/build/logs)
 node_modules/
 dist/
 build/
 .turbo/
+*.tsbuildinfo
+.npm/
+pnpm-debug.log*
 
 # Rust
 target/
@@ -16,5 +22,13 @@ Cargo.lock
 .DS_Store
 .vscode/
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Docker volumes are managed by Docker, not git
+# Docker volumes and temp files
+.docker-data/
+postgres-data/
+rabbitmq-data/
