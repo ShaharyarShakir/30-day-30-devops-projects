@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: resume-inference
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/ShaharyarShakir/30-day-30-devops-projects.git"
+    targetRevision: HEAD
+    path: 07__day/infra/kustomize/overlays/production
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: ml-serving
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
