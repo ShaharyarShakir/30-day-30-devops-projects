@@ -1,0 +1,116 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_PREFIX: shaharyarshakir/chaindeploy
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm@11.5.2
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Lint Node services
+        run: pnpm run lint
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.80
+
+      - name: Lint Rust services
+        run: |
+          cd services
+          cargo clippy -- -D warnings
+
+      - name: Test Rust services
+        run: |
+          cd services
+          cargo test
+
+  build-and-scan:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      matrix:
+        service: [frontend, api, builder, deployer, indexer]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker Image
+        run: |
+          if [ "${{ matrix.service }}" = "frontend" ]; then
+            docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:${{ github.sha }} -f apps/frontend/Dockerfile apps/frontend
+          elif [ "${{ matrix.service }}" = "api" ]; then
+            docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:${{ github.sha }} -f apps/api/Dockerfile apps/api
+          else
+            docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:${{ github.sha }} -f services/${{ matrix.service }}/Dockerfile services
+          fi
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Docker Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-${{ matrix.service }}:latest
+
+  update-gitops:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Chart Image Tags
+        run: |
+          for service in frontend api builder deployer indexer; do
+            sed -i "s/tag: \"latest\"/tag: \"${{ github.sha }}\"/g" gitops/applications/charts/$service/values.yaml
+          done
+
+      - name: Commit & Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add gitops/applications/charts/*/values.yaml
+          git commit -m "ci: update image tags to ${{ github.sha }} [skip ci]" || exit 0
+          git push
