@@ -1,0 +1,116 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: resume-ai
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-policy
+  namespace: resume-ai
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from ingress controllers (NGINX) or users
+    - {}
+  egress:
+    # Allow traffic to auth, resume, and ml services
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+        - podSelector:
+            matchLabels:
+              app: resume-service
+        - podSelector:
+            matchLabels:
+              app: ml-service
+    # Allow traffic to Prometheus for scraping
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-services-policy
+  namespace: resume-ai
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [auth-service, resume-service, ml-service, resume-worker]
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from the Gateway
+    - from:
+        - podSelector:
+            matchLabels:
+              app: gateway
+  egress:
+    # Allow communication to databases (Postgres, Garage, Kafka, Redis)
+    - to:
+        - podSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values: [postgres, garage, kafka, redis, mlflow]
+    # Allow communication to external DNS/kube-dns
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-policy
+  namespace: resume-ai
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [postgres, garage, kafka, redis, mlflow]
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow database connections from backend services and worker
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values: [auth-service, resume-service, ml-service, resume-worker]
+      ports:
+        - protocol: TCP
+          port: 5432 # Postgres
+        - protocol: TCP
+          port: 3900 # Garage S3
+        - protocol: TCP
+          port: 9092 # Kafka
+        - protocol: TCP
+          port: 6379 # Redis
+        - protocol: TCP
+          port: 5000 # MLflow
