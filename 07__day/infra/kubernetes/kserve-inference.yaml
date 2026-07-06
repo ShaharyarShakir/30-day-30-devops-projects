@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s3-secret
+  namespace: ml-serving
+  annotations:
+    serving.kserve.io/s3-endpoint: "garage.resume-ai-net:3900" # Internal Garage endpoint
+    serving.kserve.io/s3-usehttps: "0"
+    serving.kserve.io/s3-verifyssl: "0"
+    serving.kserve.io/s3-region: "us-east-1"
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: "garage_access_key_id"
+  AWS_SECRET_ACCESS_KEY: "garage_secret_access_key"
+  AWS_DEFAULT_REGION: "us-east-1"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kserve-sa
+  namespace: ml-serving
+secrets:
+  - name: s3-secret
+---
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: candidate-ranker
+  namespace: ml-serving
+  annotations:
+    # Knative Autoscaling configs
+    autoscaling.knative.dev/metric: "concurrency"
+    autoscaling.knative.dev/target: "10"
+    autoscaling.knative.dev/min-scale: "0"
+    autoscaling.knative.dev/max-scale: "5"
+spec:
+  predictor:
+    serviceAccountName: kserve-sa
+    model:
+      modelFormat:
+        name: sklearn
+      storageUri: "s3://models/candidate-ranker"
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
