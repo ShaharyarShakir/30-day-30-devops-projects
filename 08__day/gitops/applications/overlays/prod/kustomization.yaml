@@ -1,0 +1,80 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources: []
+
+helmCharts:
+  - name: api
+    releaseName: api-prod
+    version: 0.1.0
+    repo: ../../charts
+    valuesInline:
+      replicaCount: 3
+      ingress:
+        hosts:
+          - host: api.chaindeploy.dev
+            paths:
+              - path: /
+                pathType: Prefix
+      env:
+        DATABASE_URL: "postgresql://postgres:postgres@postgres-prod-postgresql:5432/chaindeploy"
+        REDIS_URL: "redis://redis-prod-master:6379"
+      autoscaling:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 10
+
+  - name: frontend
+    releaseName: frontend-prod
+    version: 0.1.0
+    repo: ../../charts
+    valuesInline:
+      replicaCount: 3
+      ingress:
+        hosts:
+          - host: app.chaindeploy.dev
+            paths:
+              - path: /
+                pathType: Prefix
+
+  - name: builder
+    releaseName: builder-prod
+    version: 0.1.0
+    repo: ../../charts
+    valuesInline:
+      replicaCount: 3
+      env:
+        DATABASE_URL: "postgresql://postgres:postgres@postgres-prod-postgresql:5432/chaindeploy"
+        REDIS_URL: "redis://redis-prod-master:6379"
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 5
+
+  - name: deployer
+    releaseName: deployer-prod
+    version: 0.1.0
+    repo: ../../charts
+    valuesInline:
+      replicaCount: 3
+      env:
+        DATABASE_URL: "postgresql://postgres:postgres@postgres-prod-postgresql:5432/chaindeploy"
+        REDIS_URL: "redis://redis-prod-master:6379"
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 5
+
+  - name: indexer
+    releaseName: indexer-prod
+    version: 0.1.0
+    repo: ../../charts
+    valuesInline:
+      replicaCount: 3
+      env:
+        DATABASE_URL: "postgresql://postgres:postgres@postgres-prod-postgresql:5432/chaindeploy"
+        REDIS_URL: "redis://redis-prod-master:6379"
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 5
