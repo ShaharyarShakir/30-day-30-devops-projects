@@ -1,0 +1,6 @@
+apiVersion: v2
+name: builder
+description: A Helm chart for ChainDeploy Rust Builder Worker
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
