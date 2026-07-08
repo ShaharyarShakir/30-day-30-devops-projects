@@ -1,0 +1,73 @@
+name: Build Android APK via EAS and attach to release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build eas-cli Docker image
+        run: docker build -t nomad-eas-builder -f apps/mobile/docker/eas-builder/Dockerfile apps/mobile/docker/eas-builder
+
+      - name: Login to Docker Hub (optional)
+        if: secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN
+        run: |
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+      - name: Install dependencies
+        run: pnpm --filter mobile install
+
+      - name: Run EAS build (Android APK)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EAS_BUILD_DISABLE_WATCH: 1
+        run: |
+          docker run --rm -e EXPO_TOKEN -v "$PWD":/work -w /work/apps/mobile nomad-eas-builder "eas build --platform android --profile preview --non-interactive --no-wait"
+
+      - name: Wait for EAS build and download APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Query the latest builds for the project
+          builds_json=$(curl -s -H "Authorization: Bearer $EXPO_TOKEN" "https://api.expo.dev/v2/projects/${{ github.repository }}/builds?limit=5&platform=android")
+          echo "$builds_json" > builds.json
+          build_id=$(echo "$builds_json" | jq -r '.data[0].id')
+          echo "Found build id: $build_id"
+
+          # Poll until build finished
+          status=""
+          for i in {1..60}; do
+            status=$(curl -s -H "Authorization: Bearer $EXPO_TOKEN" "https://api.expo.dev/v2/builds/$build_id" | jq -r '.data.attributes.status')
+            echo "Build status: $status"
+            if [[ "$status" == "finished" ]]; then
+              break
+            fi
+            if [[ "$status" == "errored" ]]; then
+              echo "Build errored"
+              exit 1
+            fi
+            sleep 10
+          done
+
+          # Get artefact URL
+          artifact_url=$(curl -s -H "Authorization: Bearer $EXPO_TOKEN" "https://api.expo.dev/v2/builds/$build_id" | jq -r '.data.attributes.artifacts[0].url')
+          echo "Artifact URL: $artifact_url"
+
+          curl -L -o app.apk "$artifact_url"
+
+      - name: Create GitHub release and upload APK
+        uses: softprops/action-gh-release@v1
+        with:
+          files: app.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
