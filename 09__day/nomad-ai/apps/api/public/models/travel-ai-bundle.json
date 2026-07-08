@@ -1,0 +1,8 @@
+{
+  "files": {
+    "model.onnx": "MOCK_ONNX_MODEL_WEIGHTS_BINARY_DATA_REPRESENTATION_HEX_ABCDEF1234567890",
+    "tokenizer.json": "{\"vocab\": {\"[PAD]\": 0, \"[UNK]\": 1, \"[CLS]\": 2, \"[SEP]\": 3, \"hello\": 4, \"world\": 5, \"travel\": 6, \"hotel\": 7, \"flight\": 8, \"packing\": 9, \"list\": 10, \"paris\": 11, \"tokyo\": 12}}",
+    "config.json": "{\"model_type\": \"travel-assistant-llama-nano\", \"version\": \"1.2.0\", \"parameters\": 15000000, \"vocab_size\": 13, \"hidden_size\": 64}",
+    "vocab.json": "{\"[PAD]\": 0, \"[UNK]\": 1, \"[CLS]\": 2, \"[SEP]\": 3, \"hello\": 4, \"world\": 5, \"travel\": 6, \"hotel\": 7, \"flight\": 8, \"packing\": 9, \"list\": 10, \"paris\": 11, \"tokyo\": 12}"
+  }
+}

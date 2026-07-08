@@ -13,6 +13,7 @@ import expensesRouter from "./routes/expenses.js";
 import journalsRouter from "./routes/journals.js";
 import notificationsRouter from "./routes/notifications.js";
 import uploadsRouter from "./routes/uploads.js";
+import aiRouter from "./routes/ai.js";
 import { websocketRouter } from "./websocket/server.js";
 import { startWorker } from "./jobs/worker.js";
 
@@ -81,6 +82,7 @@ app.route("/expenses", expensesRouter);
 app.route("/journals", journalsRouter);
 app.route("/notifications", notificationsRouter);
 app.route("/uploads", uploadsRouter);
+app.route("/ai", aiRouter);
 
 // Register WebSocket Route
 app.route("/ws/trips", websocketRouter);
