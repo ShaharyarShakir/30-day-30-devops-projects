@@ -17,6 +17,15 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(modals)/settings" options={{ presentation: "modal" }} />
           <Stack.Screen name="(modals)/notifications" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/ai-download" options={{ presentation: "modal", gestureEnabled: false }} />
+          <Stack.Screen name="(modals)/ai-manager" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/trip-details" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/chat" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/album" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/timeline" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/voting" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/qr" options={{ presentation: "modal" }} />
+          <Stack.Screen name="(modals)/settlements" options={{ presentation: "modal" }} />
         </Stack>
       </AuthProvider>
     </QueryClientProvider>
