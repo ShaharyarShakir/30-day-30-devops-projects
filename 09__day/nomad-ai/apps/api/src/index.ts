@@ -14,6 +14,13 @@ import journalsRouter from "./routes/journals.js";
 import notificationsRouter from "./routes/notifications.js";
 import uploadsRouter from "./routes/uploads.js";
 import aiRouter from "./routes/ai.js";
+import messagesRouter from "./routes/messages.js";
+import mediaRouter from "./routes/media.js";
+import locationsRouter from "./routes/locations.js";
+import votesRouter from "./routes/votes.js";
+import timelineRouter from "./routes/timeline.js";
+import expensesSocialRouter from "./routes/expenses-social.js";
+import qrRouter from "./routes/qr.js";
 import { websocketRouter } from "./websocket/server.js";
 import { startWorker } from "./jobs/worker.js";
 
@@ -83,6 +90,13 @@ app.route("/journals", journalsRouter);
 app.route("/notifications", notificationsRouter);
 app.route("/uploads", uploadsRouter);
 app.route("/ai", aiRouter);
+app.route("/messages", messagesRouter);
+app.route("/media", mediaRouter);
+app.route("/locations", locationsRouter);
+app.route("/votes", votesRouter);
+app.route("/timeline", timelineRouter);
+app.route("/expenses-social", expensesSocialRouter);
+app.route("/qr", qrRouter);
 
 // Register WebSocket Route
 app.route("/ws/trips", websocketRouter);
