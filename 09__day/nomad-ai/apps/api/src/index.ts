@@ -81,6 +81,9 @@ app.use("*", async (c, next) => {
 // Serve Static Uploads
 app.use("/uploads/*", serveStatic({ root: "./public" }));
 
+// Health Check
+app.get("/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }));
+
 // Register REST Routes
 app.route("/auth", authRouter);
 app.route("/trips", tripsRouter);

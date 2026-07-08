@@ -10,7 +10,9 @@ const aiRouter = new Hono<{ Variables: AuthContextVariables }>();
 
 aiRouter.get("/models", async (c) => {
   const host = c.req.header("host") || "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
+  const forwardedProto = c.req.header("x-forwarded-proto");
+  const isLocal = host.startsWith("localhost") || host.startsWith("127.") || host.startsWith("192.168.") || host.startsWith("10.");
+  const protocol = forwardedProto || (isLocal ? "http" : "https");
   const baseUrl = `${protocol}://${host}`;
 
   const bundlePath = path.resolve("./public/models/travel-ai-bundle.json");
