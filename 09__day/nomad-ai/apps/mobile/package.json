@@ -1,5 +1,5 @@
 {
-  "name": "Nomad AI",
+  "name": "mobile",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
@@ -12,6 +12,7 @@
     "expo-constants": "~57.0.3",
     "expo-file-system": "^57.0.0",
     "expo-image": "^57.0.0",
+    "expo-image-manipulator": "^57.0.2",
     "expo-image-picker": "^57.0.2",
     "expo-linking": "~57.0.2",
     "expo-location": "^57.0.2",
@@ -20,11 +21,13 @@
     "expo-secure-store": "^57.0.0",
     "expo-sqlite": "^57.0.0",
     "expo-status-bar": "~57.0.0",
+    "expo-system-ui": "~57.0.0",
     "expo-task-manager": "^57.0.2",
     "nativewind": "^4.2.6",
     "react": "19.2.3",
     "react-hook-form": "^7.81.0",
     "react-native": "0.86.0",
+    "react-native-qrcode-svg": "^6.3.21",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
     "zod": "^4.4.3",
