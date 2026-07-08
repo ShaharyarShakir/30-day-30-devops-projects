@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@repo/validation": ["../../packages/validation/src/index.ts"],
+      "@repo/config": ["../../packages/config/src/index.ts"],
+      "@repo/types": ["../../packages/types/src/index.ts"]
+    }
+  }
+}
