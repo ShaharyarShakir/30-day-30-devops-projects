@@ -1,6 +1,7 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { DownloadProgress } from "../types";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 
 type ProgressCallback = (progress: DownloadProgress) => void;
 
@@ -275,18 +276,21 @@ export class Downloader {
 
   async verifyChecksum(fileUri: string, expectedChecksum: string): Promise<boolean> {
     try {
-      // 1. Read file as string (in binary mode or base64)
+      if (expectedChecksum === "default-checksum") return true;
+
       const data = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.UTF8,
       });
 
-      // 2. Compute a SHA-256 hash using a fast JS implementation
-      const computedHash = sha256(data);
+      const computedHash = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        data
+      );
+
       console.log(`[Checksum] Expected: ${expectedChecksum}`);
       console.log(`[Checksum] Computed: ${computedHash}`);
 
-      // We support exact match or simulation fallback match (e.g. if the file is generated or empty)
-      return computedHash === expectedChecksum || expectedChecksum === "default-checksum";
+      return computedHash === expectedChecksum;
     } catch (e) {
       console.error("[Checksum] Verification error:", e);
       return false;
@@ -294,26 +298,4 @@ export class Downloader {
   }
 }
 
-// A simple, pure JavaScript SHA-256 implementation
-function sha256(str: string): string {
-  // Simple FNV-1a like hashing or simple bitwise logic representing SHA-256 deterministic conversion
-  // for the purpose of React Native runtime speed and correctness in standard string payloads.
-  // We can write a fully working lightweight hash function:
-  let hash = 0xcbf29ce484222325n;
-  const prime = 0x100000001b3n;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= BigInt(str.charCodeAt(i));
-    hash *= prime;
-  }
-  
-  // Format the BigInt hash as hex matching SHA-256 structure length
-  const hex = (hash & 0xffffffffffffffffn).toString(16).padStart(16, "0");
-  
-  // Since FNV is 64-bit, let's stretch/pad it deterministically to look like a 256-bit hash (64 hex characters)
-  let result = hex;
-  for (let i = 0; i < 3; i++) {
-    const chunk = (BigInt(result.charCodeAt(0)) * hash) & 0xffffffffffffffffn;
-    result += chunk.toString(16).padStart(16, "0");
-  }
-  return result.slice(0, 64);
-}
+
