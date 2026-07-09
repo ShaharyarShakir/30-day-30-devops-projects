@@ -1,0 +1,17 @@
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+replication_mode = "none"
+
+
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_secret = "9621cb0cfc02a7b8e5c8e3cc0d4948a3e5c8e3cc0d4948a3e5c8e3cc0d4948af"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "0.0.0.0:3900"
+root_domain = "localhost"
+
+[admin]
+api_bind_addr = "0.0.0.0:3903"
+admin_token = "nomad_admin_token_2026"
