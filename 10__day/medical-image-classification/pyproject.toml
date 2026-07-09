@@ -1,0 +1,24 @@
+[project]
+name = "medical-image-classification"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0.3",
+    "scikit-learn>=1.9.0",
+    "huggingface-hub",
+    "pillow",
+    "tensorflow>=2.21.0",
+    "pandas>=3.0.3",
+    "matplotlib",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "reportlab>=5.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.20",
+]
