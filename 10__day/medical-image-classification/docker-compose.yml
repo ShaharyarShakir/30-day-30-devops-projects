@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   postgres:
@@ -41,8 +39,11 @@ services:
     environment:
       GARAGE_URL: http://garage:3902
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
     ports:
-      - "3000:3000"
+      - "3000:3909"
+
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
