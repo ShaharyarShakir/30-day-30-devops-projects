@@ -12,6 +12,8 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name="conv5_block16_c
     for layer in model.layers:
         if layer.name == "densenet121":
             break
+        if isinstance(layer, tf.keras.layers.InputLayer) or "InputLayer" in layer.__class__.__name__:
+            continue
         try:
             x = layer(x, training=False)
         except TypeError:

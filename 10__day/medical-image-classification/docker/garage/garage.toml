@@ -8,18 +8,15 @@ rpc_bind_addr = "[::]:3901"
 rpc_public_addr = "garage:3901"
 rpc_secret = "$GARAGE_RPC_SECRET"
 
-s3_api = {
-  s3_region = "garage",
-api_bind_addr = "[::]:3900",
-
-}
-
-admin = {
-  api_bind_addr = "[::]:3902",
-
-}
-
-s3_cors_allow_origin = "*"
-admin_token = "$GARAGE_ADMIN_TOKEN"
 # Replication settings
-replication_mode = "none"
+replication_factor = 1
+consistency_mode = "consistent"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+s3_cors_allow_origin = "*"
+
+[admin]
+api_bind_addr = "[::]:3902"
+admin_token = "$GARAGE_ADMIN_TOKEN"
