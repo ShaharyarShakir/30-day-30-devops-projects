@@ -1,0 +1,31 @@
+dataset:
+  repo_id: shaharyarshakir/ml-datasets
+  repo_type: dataset
+  dataset_folder: Pneumonia_Dataset
+
+  raw_data_path: data/raw
+  processed_data_path: data/processed
+
+split:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+  random_state: 42
+
+image:
+  width: 224
+  height: 224
+  channels: 3
+
+training:
+  batch_size: 32
+  epochs: 10
+  learning_rate: 0.0001
+
+model:
+  input_shape: [224, 224, 3]
+  num_classes: 1
+  save_path: models/model.keras
+
+inference:
+  threshold: 0.5
