@@ -20,7 +20,7 @@ services:
       retries: 5
 
   garage:
-    image: dxkwxn/garage:latest
+    image: dxflrs/garage:v2.0.0
     restart: always
     environment:
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
@@ -34,7 +34,7 @@ services:
       - "3902:3902"
 
   garage-ui:
-    image: dxkwxn/garage-ui:latest
+    image: khairul169/garage-webui:latest
     restart: always
     depends_on:
       - garage
