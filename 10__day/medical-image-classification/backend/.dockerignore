@@ -29,3 +29,5 @@ yarn-error.log
 out/
 coverage/
 .turbo/
+.venv/
+.ruff_cache/
