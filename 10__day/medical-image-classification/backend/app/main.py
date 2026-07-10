@@ -6,7 +6,9 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.health import router as health_router
 from app.api.v1.predict import router as predict_router
-from src.logger import logger
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("backend")
 
 app = FastAPI(
     title="Medical Image Classification",
