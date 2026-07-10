@@ -1,0 +1,68 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_resources/
+
+# Build outputs
+dist/
+build/
+bin/
+out/
+.output/
+.vinxi/
+.react-router/
+routeTree.gen.ts
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Gradle files
+.gradle/
+/build/
+!gradle-wrapper.jar
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+venv/
+.venv/
+env/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local Docker volume data (avoid committing database storage)
+infrastructure/compose/volumes/
+infrastructure/compose/meta/
+infrastructure/compose/data/
