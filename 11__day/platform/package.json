@@ -1,22 +1,21 @@
 {
-  "name": "platform-monorepo",
+  "name": "learning-platform",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.10.0",
   "description": "Enterprise microservices platform monorepo",
-  "workspaces": [
-    "apps/*",
-    "services/*",
-    "packages/*"
-  ],
   "scripts": {
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "clean": "npm run clean -w apps/frontend -w services/gateway"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "prettier --write ."
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",
     "eslint": "^9.7.0",
     "prettier": "^3.3.3",
+    "turbo": "latest",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.0"
   }
