@@ -1,0 +1,7 @@
+# Tiltfile - Local Cloud Development Orchestration
+
+# Load the modular docker-compose configurations
+docker_compose('docker-compose.yml')
+
+# Configure specific services if needed (e.g. forward Tilt dashboard, configure logs)
+# Tilt automatically handles logs, container updates, and health status for compose services.
