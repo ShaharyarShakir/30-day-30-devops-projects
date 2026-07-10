@@ -1,0 +1,9 @@
+services: {}
+
+include:
+  - infrastructure/compose/postgres.yml
+  - infrastructure/compose/mongodb.yml
+  - infrastructure/compose/redis.yml
+  - infrastructure/compose/kafka.yml
+  - infrastructure/compose/mailpit.yml
+  - infrastructure/compose/garage.yml
