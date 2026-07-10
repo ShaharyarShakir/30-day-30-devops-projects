@@ -1,12 +1,11 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "medical-image-classification"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
+description = "Medical Image Classification and MLOps Platform"
 requires-python = ">=3.11"
 dependencies = [
     "pyyaml>=6.0.3",
@@ -20,13 +19,14 @@ dependencies = [
     "uvicorn",
     "python-multipart",
     "reportlab>=5.0.0",
+    "mlflow",
+    "boto3",
+    "gunicorn",
+    "opencv-python-headless",
 ]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.15.20",
-]
+dev = ["ruff>=0.15.20"]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["app*", "models*", "configs*"]
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
