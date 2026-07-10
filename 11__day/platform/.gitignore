@@ -17,7 +17,7 @@ target/
 *.jar
 *.war
 *.ear
-
+.turbo/
 # Gradle files
 .gradle/
 /build/
