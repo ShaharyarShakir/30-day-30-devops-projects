@@ -1,0 +1,23 @@
+{
+  "name": "platform-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Enterprise microservices platform monorepo",
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "clean": "npm run clean -w apps/frontend -w services/gateway"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.7.0",
+    "eslint": "^9.7.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.0.0"
+  }
+}
