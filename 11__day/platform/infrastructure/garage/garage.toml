@@ -1,0 +1,22 @@
+# Garage configuration file
+# Reference: https://garagehq.deuxfleurs.fr/documentation/reference-manual/configuration/
+
+metadata_dir = "/mnt/garage/meta"
+data_dir = "/mnt/garage/data"
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "garage:3901"
+rpc_secret = "$GARAGE_RPC_SECRET"
+
+# Replication settings
+replication_factor = 1
+consistency_mode = "consistent"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+s3_cors_allow_origin = "*"
+
+[admin]
+api_bind_addr = "[::]:3902"
+admin_token = "$GARAGE_ADMIN_TOKEN"
