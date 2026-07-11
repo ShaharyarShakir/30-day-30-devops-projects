@@ -66,3 +66,6 @@ Thumbs.db
 infrastructure/compose/volumes/
 infrastructure/compose/meta/
 infrastructure/compose/data/
+
+# Security keys
+**/*.pem
