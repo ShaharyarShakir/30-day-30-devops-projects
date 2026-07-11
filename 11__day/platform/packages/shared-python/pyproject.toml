@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shared-python"
+version = "1.0.0"
+description = "Shared Python utilities"
+readme = "README.md"
+requires-python = ">=3.10"
