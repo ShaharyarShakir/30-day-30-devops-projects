@@ -31,7 +31,10 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="h-16 w-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto text-3xl">
               ⚠️
             </div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "Outfit, sans-serif" }}>
+            <h1
+              className="text-2xl font-bold tracking-tight"
+              style={{ fontFamily: "Outfit, sans-serif" }}
+            >
               Something went wrong
             </h1>
             <p className="text-sm text-slate-400">
