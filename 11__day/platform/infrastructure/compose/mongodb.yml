@@ -1,0 +1,26 @@
+services:
+  mongodb:
+    image: mongo:8
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --eval 'db.runCommand({ ping: 1 })' -u root -p root --quiet"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - default
+
+networks:
+  default:
+    name: platform-network
+
+volumes:
+  mongodb-data:
