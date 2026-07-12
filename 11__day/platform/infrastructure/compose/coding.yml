@@ -1,0 +1,39 @@
+services:
+  coding:
+    build:
+      context: ../../services/coding
+      dockerfile: Dockerfile
+    ports:
+      - "5007:5007"
+    environment:
+      PORT: 5007
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: coding_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BROKER: kafka:9092
+      JWT_SECRET: super_secret_platform_dev_jwt_key_that_is_at_least_256_bits_long_for_security_standards
+    depends_on:
+      - postgres
+      - kafka
+    restart: unless-stopped
+
+  judge:
+    build:
+      context: ../../services/judge
+      dockerfile: Dockerfile
+    ports:
+      - "5008:5008"
+    environment:
+      PORT: 5008
+      KAFKA_BROKER: kafka:9092
+      KAFKA_REQUEST_TOPIC: code.execution.requested
+      KAFKA_RESULT_TOPIC: code.execution.completed
+    depends_on:
+      - kafka
+    restart: unless-stopped
+    volumes:
+      - ~/.kube/config:/root/.kube/config:ro
