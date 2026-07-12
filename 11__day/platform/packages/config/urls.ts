@@ -8,8 +8,10 @@ export const LOCAL_URLS = {
   course: `http://localhost:${PORTS.course}`,
   media: `http://localhost:${PORTS.media}`,
   chat: `http://localhost:${PORTS.chat}`,
+  liveSession: `http://localhost:${PORTS.liveSession}`,
   notification: `http://localhost:${PORTS.notification}`,
   search: `http://localhost:${PORTS.search}`,
+  liveKit: `ws://localhost:${PORTS.liveKit}`,
 
   // Infrastructure Web UIs
   kafkaUi: `http://localhost:${PORTS.kafkaUi}`,
@@ -27,5 +29,7 @@ export const CONTAINER_URLS = {
   kafka: `kafka:${PORTS.kafka}`,
   auth: `http://auth:${PORTS.auth}`,
   gateway: `http://gateway:${PORTS.gateway}`,
-  user: `http://user:${PORTS.user}`
+  user: `http://user:${PORTS.user}`,
+  liveSession: `http://live-session:${PORTS.liveSession}`,
+  liveKit: `ws://livekit:${PORTS.liveKit}`
 } as const;
