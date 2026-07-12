@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+  # Redis for distributed rate limiting and presence
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - realtime_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Kafka for event streaming
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - realtime_network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - realtime_network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Realtime Gateway Instance 1
+  gateway-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - WEBSOCKET_PORT=4001
+      - JWT_SECRET=super_secret_platform_dev_jwt_key_that_is_at_least_256_bits_long_for_security_standards
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKER=kafka:29092
+      - MAX_MESSAGE_SIZE=10000
+      - MAX_ROOMS_PER_CLIENT=50
+      - MAX_DEVICES_PER_USER=5
+      - IDLE_TIMEOUT_MS=300000
+      - HEARTBEAT_INTERVAL_MS=30000
+      - RATE_LIMIT_MESSAGES_PER_MINUTE=30
+      - RATE_LIMIT_TYPING_PER_SECOND=5
+      - RATE_LIMIT_REACTIONS_PER_MINUTE=300
+      - KAFKA_REALTIME_EVENTS_TOPIC=platform.realtime-events
+      - KAFKA_CHAT_MESSAGES_TOPIC=platform.chat-messages
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - realtime_network
+    restart: unless-stopped
+
+  # Realtime Gateway Instance 2
+  gateway-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4002:4000"
+      - "4003:4001"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - WEBSOCKET_PORT=4001
+      - JWT_SECRET=super_secret_platform_dev_jwt_key_that_is_at_least_256_bits_long_for_security_standards
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKER=kafka:29092
+      - MAX_MESSAGE_SIZE=10000
+      - MAX_ROOMS_PER_CLIENT=50
+      - MAX_DEVICES_PER_USER=5
+      - IDLE_TIMEOUT_MS=300000
+      - HEARTBEAT_INTERVAL_MS=30000
+      - RATE_LIMIT_MESSAGES_PER_MINUTE=30
+      - RATE_LIMIT_TYPING_PER_SECOND=5
+      - RATE_LIMIT_REACTIONS_PER_MINUTE=300
+      - KAFKA_REALTIME_EVENTS_TOPIC=platform.realtime-events
+      - KAFKA_CHAT_MESSAGES_TOPIC=platform.chat-messages
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - realtime_network
+    restart: unless-stopped
+
+  # Realtime Gateway Instance 3
+  gateway-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4004:4000"
+      - "4005:4001"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - WEBSOCKET_PORT=4001
+      - JWT_SECRET=super_secret_platform_dev_jwt_key_that_is_at_least_256_bits_long_for_security_standards
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BROKER=kafka:29092
+      - MAX_MESSAGE_SIZE=10000
+      - MAX_ROOMS_PER_CLIENT=50
+      - MAX_DEVICES_PER_USER=5
+      - IDLE_TIMEOUT_MS=300000
+      - HEARTBEAT_INTERVAL_MS=30000
+      - RATE_LIMIT_MESSAGES_PER_MINUTE=30
+      - RATE_LIMIT_TYPING_PER_SECOND=5
+      - RATE_LIMIT_REACTIONS_PER_MINUTE=300
+      - KAFKA_REALTIME_EVENTS_TOPIC=platform.realtime-events
+      - KAFKA_CHAT_MESSAGES_TOPIC=platform.chat-messages
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - realtime_network
+    restart: unless-stopped
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway-1
+      - gateway-2
+      - gateway-3
+    networks:
+      - realtime_network
+    restart: unless-stopped
+
+networks:
+  realtime_network:
+    driver: bridge
+
+volumes:
+  redis_data:
