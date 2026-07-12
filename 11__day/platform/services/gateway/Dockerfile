@@ -31,27 +31,15 @@ COPY services/gateway/ ./services/gateway/
 RUN pnpm --filter @platform/config build
 RUN pnpm --filter gateway build
 
-# Production Dependency Stage
-FROM base AS prod-dependencies
-
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY .npmrc ./
-COPY packages/config/package.json ./packages/config/
-COPY services/gateway/package.json ./services/gateway/
-
-# Install only production dependencies
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts
-
 # Runtime Stage
 FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Copy node_modules and builds
-COPY --from=prod-dependencies /app/node_modules ./node_modules
-COPY --from=prod-dependencies /app/packages/config/node_modules ./packages/config/node_modules
-COPY --from=prod-dependencies /app/services/gateway/node_modules ./services/gateway/node_modules
+# Copy all node_modules from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
 
+# Copy build artifacts and package files
 COPY --from=builder /app/packages/config/dist ./packages/config/dist
 COPY --from=builder /app/packages/config/package.json ./packages/config/package.json
 COPY --from=builder /app/services/gateway/dist ./services/gateway/dist
