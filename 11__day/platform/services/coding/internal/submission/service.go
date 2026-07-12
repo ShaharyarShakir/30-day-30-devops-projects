@@ -47,6 +47,24 @@ func (s *Service) ListByUser(ctx context.Context, userID string) ([]*Submission,
 	return s.repo.ListByUser(ctx, uid)
 }
 
+func (s *Service) ListByUserWithFilters(ctx context.Context, userID, problemID, language, status, limit, offset string) ([]*Submission, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, err
+	}
+	
+	var problemUUID *uuid.UUID
+	if problemID != "" {
+		puid, err := uuid.Parse(problemID)
+		if err != nil {
+			return nil, err
+		}
+		problemUUID = &puid
+	}
+	
+	return s.repo.ListByUserWithFilters(ctx, uid, problemUUID, language, status, limit, offset)
+}
+
 func (s *Service) ListByProblem(ctx context.Context, problemID string) ([]*Submission, error) {
 	uid, err := uuid.Parse(problemID)
 	if err != nil {
