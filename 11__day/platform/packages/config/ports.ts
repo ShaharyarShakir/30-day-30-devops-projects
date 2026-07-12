@@ -7,8 +7,9 @@ export const PORTS = {
   course: 5002,
   media: 5003,
   chat: 5004,
-  notification: 5005,
-  search: 5006,
+  liveSession: 5005,
+  notification: 5006,
+  search: 5007,
 
   // Infrastructure Services
   postgres: 5432,
@@ -21,6 +22,9 @@ export const PORTS = {
   garageAdmin: 3903,
   mailpitSmtp: 1025,
   mailpitUi: 8025,
+  liveKit: 7880,
+  liveKitHttp: 7881,
+  liveKitUdp: 7882,
 
   // Observability
   prometheus: 9090,
