@@ -15,6 +15,8 @@ export interface LiveSession {
 
 export interface SessionTokenResponse {
   token: string;
+  livekit_token: string;
+  livekit_url: string;
   session_id: string;
   user_id: string;
   role: "INSTRUCTOR" | "STUDENT";
