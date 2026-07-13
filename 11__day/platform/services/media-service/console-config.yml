@@ -1,0 +1,7 @@
+server:
+  listenPort: 8080
+
+redpanda:
+  adminApi:
+    urls:
+      - http://kafka:9644
