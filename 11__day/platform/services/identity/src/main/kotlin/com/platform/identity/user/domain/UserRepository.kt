@@ -1,0 +1,9 @@
+package com.platform.identity.user.domain
+
+import java.util.UUID
+
+interface UserRepository {
+    fun save(user: User): User
+    fun findByEmail(email: String): User?
+    fun findById(id: UUID): User?
+}
