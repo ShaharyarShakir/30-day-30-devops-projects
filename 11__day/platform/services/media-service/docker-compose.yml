@@ -1,0 +1,87 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: media-postgres
+    environment:
+      POSTGRES_DB: media_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  garage:
+    image: dxflrs/garage:v1.0.0
+    container_name: media-garage
+    ports:
+      - "3900:3900"
+      - "3902:3902"
+      - "3903:3903"
+    environment:
+      - GARAGE_RPC_SECRET=garage
+    volumes:
+      - garage_data:/data
+    command: >
+      sh -c "
+      garage layout assign -c localhost -z dc1 -s 1 2>&1 || true &&
+      garage layout show 2>&1 || true &&
+      garage layout apply --version 1 2>&1 || true &&
+      garage bucket create media 2>&1 || true &&
+      garage bucket allow --read --write --admin --key garage media 2>&1 || true &&
+      garage server
+      "
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3900/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.10
+    container_name: media-kafka
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --overprovisioned
+      - --node-id=0
+      - --kafka-addr=0.0.0.0:9092
+      - --advertise-kafka-addr=localhost:9092
+      - --pandaproxy-addr=0.0.0.0:8082
+      - --advertise-pandaproxy-addr=localhost:8082
+    ports:
+      - "9092:9092"
+      - "8082:8082"
+    volumes:
+      - kafka_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.7.0
+    container_name: media-redpanda-console
+    ports:
+      - "8080 :8080"
+    environment:
+      - CONFIG_FILE=/config/console-config.yml
+    volumes:
+      - ./console-config.yml:/config/console-config.yml:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  garage_data:
+  kafka_data:
