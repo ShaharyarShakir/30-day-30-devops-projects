@@ -1,0 +1,10 @@
+{
+  "name": "media-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run python manage.py runserver 0.0.0.0:8000",
+    "build": "echo 'No build step required for Django'",
+    "test": "uv run pytest"
+  }
+}
