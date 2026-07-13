@@ -1,0 +1,10 @@
+{
+  "name": "live-session-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "go run cmd/api/main.go",
+    "build": "go build -o dist/api cmd/api/main.go",
+    "test": "go test ./..."
+  }
+}
