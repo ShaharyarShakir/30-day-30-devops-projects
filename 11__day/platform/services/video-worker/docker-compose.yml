@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  video-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video-worker
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+      - KAFKA_BROKERS=kafka:9092
+      - STORAGE_ENDPOINT=http://garage:3900
+      - STORAGE_ACCESS_KEY=garage
+      - STORAGE_SECRET_KEY=secret-key
+      - STORAGE_BUCKET=media
+    volumes:
+      - ./internal/config/config.yaml:/app/config.yaml:ro
+      - /tmp/media:/tmp/media
+    depends_on:
+      - kafka
+      - garage
+    restart: unless-stopped
+    networks:
+      - platform
+
+networks:
+  platform:
+    external: true
