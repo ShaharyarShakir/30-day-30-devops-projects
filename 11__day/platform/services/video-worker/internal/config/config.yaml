@@ -1,0 +1,62 @@
+server:
+  environment: development
+  log_level: info
+
+kafka:
+  brokers:
+    - localhost:9092
+  consumer_group: video-worker
+  topics:
+    upload_completed: media.upload.completed
+    processing_progress: media.processing.progress
+    processing_finished: media.processing.finished
+    processing_failed: media.processing.failed
+
+storage:
+  endpoint: http://localhost:3900
+  access_key: garage
+  secret_key: secret-key
+  bucket: media
+  region: us-east-1
+  use_ssl: false
+  force_path_style: true
+
+ffmpeg:
+  path: ffmpeg
+  ffprobe_path: ffprobe
+  timeout: 30m
+  segment_time: 6
+  renditions:
+    - name: "1080p"
+      width: 1920
+      height: 1080
+      bitrate: "5000k"
+      audio_rate: "192k"
+    - name: "720p"
+      width: 1280
+      height: 720
+      bitrate: "3000k"
+      audio_rate: "128k"
+    - name: "480p"
+      width: 854
+      height: 480
+      bitrate: "1500k"
+      audio_rate: "128k"
+    - name: "360p"
+      width: 640
+      height: 360
+      bitrate: "800k"
+      audio_rate: "96k"
+
+worker:
+  temp_dir: /tmp/media
+  max_concurrent: 1
+  retry_attempts: 3
+  retry_delay: 5s
+  cleanup_on_exit: true
+
+telemetry:
+  enabled: true
+  service_name: video-worker
+  jaeger:
+    endpoint: http://localhost:14268/api/traces
